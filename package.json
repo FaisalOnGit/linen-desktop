@@ -1,9 +1,9 @@
 {
-  "name": "choralith-audio-explorer",
-  "productName": "Choralith Audio Explorer",
+  "name": "osla-desktop",
+  "productName": "OSLA",
   "version": "1.0.0",
   "main": "electron/main.js",
-  "author": "Stefano Mercadante <stefmercadante@gmail.com>",
+  "author": "Faisal Rahman",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -27,13 +27,14 @@
     "@tailwindcss/vite": "^4.1.12",
     "edge-js": "^24.0.4",
     "electron-edge-js": "^37.0.0",
+    "lucide-react": "^0.542.0",
     "music-metadata": "^7.14.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
   "build": {
-    "appId": "com.stesproject.choralith",
-    "productName": "Choralith Audio Explorer",
+    "appId": "com.osla",
+    "productName": "OSLA",
     "files": [
       "dist",
       "electron"
