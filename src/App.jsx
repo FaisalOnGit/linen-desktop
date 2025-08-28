@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import ReaderPage from "./pages/ReaderPage";
 import RegisterPage from "./pages/RegisterPage";
-import SortingPage from "./pages/SortingPage";
+import SortingLinenPage from "./pages/SortingPage";
 import GroupingPage from "./pages/GroupingPage";
 import { useRfid } from "./hooks/useRfid";
 
@@ -29,7 +29,7 @@ const App = () => {
       case "sorting":
         return <RegisterPage />;
       case "register":
-        return <SortingPage rfidHook={rfidHook} />;
+        return <SortingLinenPage rfidHook={rfidHook} />;
       case "grouping":
         return <GroupingPage rfidHook={rfidHook} />;
       default:

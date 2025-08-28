@@ -15,6 +15,12 @@ const GroupingPage = ({ rfidHook }) => {
     setIsRunning(!isRunning);
   };
 
+  // Ambil tag terakhir (kalau ada)
+  const lastTag =
+    groupingTags && groupingTags.length > 0
+      ? groupingTags[groupingTags.length - 1]
+      : null;
+
   return (
     <div>
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
@@ -50,24 +56,32 @@ const GroupingPage = ({ rfidHook }) => {
         {/* Info Grid */}
         <div className="grid grid-cols-1 gap-y-2 font-bold">
           <div className="flex items-center">
-            <label className="text-gray-600 w-20">RFID</label>
+            <label className="text-gray-600 w-24">RFID</label>
             <span className="mx-3">:</span>
-            <span className="text-gray-400">−</span>
+            <span className="text-gray-800">
+              {lastTag ? lastTag.EPC || "?" : "−"}
+            </span>
           </div>
           <div className="flex items-center">
-            <label className="text-gray-600 w-20">Linen</label>
+            <label className="text-gray-600 w-24">Linen</label>
             <span className="mx-3">:</span>
-            <span className="text-gray-400">−</span>
+            <span className="text-gray-800">
+              {lastTag ? lastTag.linenName || "-" : "−"}
+            </span>
           </div>
           <div className="flex items-center">
             <label className="text-gray-600 w-24">Customer</label>
             <span className="mx-3">:</span>
-            <span className="text-gray-400">−</span>
+            <span className="text-gray-800">
+              {lastTag ? lastTag.customerName || "-" : "−"}
+            </span>
           </div>
           <div className="flex items-center">
-            <label className="text-gray-600 w-20">Ruangan</label>
+            <label className="text-gray-600 w-24">Ruangan</label>
             <span className="mx-3">:</span>
-            <span className="text-gray-400">−</span>
+            <span className="text-gray-800">
+              {lastTag ? lastTag.room || "-" : "−"}
+            </span>
           </div>
         </div>
       </div>

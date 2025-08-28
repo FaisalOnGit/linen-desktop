@@ -9,10 +9,13 @@ export const useRfid = () => {
   const [tags, setTags] = useState([]);
   const [registerTags, setRegisterTags] = useState([]);
   const [groupingTags, setGroupingTags] = useState([]);
+  const [sortingTags, setSortingTags] = useState([]);
   const [isGroupingActive, setIsGroupingActive] = useState(false);
+  const [isSortingActive, setIsSortingActive] = useState(false);
 
   const logRef = useRef(null);
   const groupingIntervalRef = useRef(null);
+  const sortingIntervalRef = useRef(null);
 
   const log = useCallback((msg) => {
     setLogs((prev) => prev + msg + "\n");
@@ -138,6 +141,10 @@ export const useRfid = () => {
     }
   };
 
+  // ==================
+  // Grouping
+  // ==================
+
   const startGrouping = async () => {
     if (!isRfidAvailable) {
       console.error("RFID API not available");
@@ -185,6 +192,57 @@ export const useRfid = () => {
     }
   };
 
+  // ==================
+  // Sorting
+  // ==================
+  const startSorting = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.startInventory();
+      setIsSortingActive(true);
+
+      sortingIntervalRef.current = setInterval(async () => {
+        try {
+          const tagsData = await window.rfidAPI.getTags();
+          // bedakan by antennaId
+          const enrichedTags = tagsData.map((tag) => ({
+            ...tag,
+            linenName: "Handuk",
+            customerName: "RS NCI",
+            room: tag.antenna === 1 ? "Meja Kiri" : "Meja Kanan",
+            status: "Sorting",
+          }));
+          setSortingTags(enrichedTags);
+        } catch (err) {
+          console.error("Error fetching sorting tags:", err);
+        }
+      }, 500);
+    } catch (err) {
+      console.error("Error starting sorting:", err);
+    }
+  };
+
+  const stopSorting = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.stopInventory();
+      setIsSortingActive(false);
+      if (sortingIntervalRef.current) {
+        clearInterval(sortingIntervalRef.current);
+      }
+    } catch (err) {
+      console.error("Error stopping sorting:", err);
+    }
+  };
+
   return {
     // State
     ip,
@@ -197,9 +255,12 @@ export const useRfid = () => {
     tags,
     registerTags,
     groupingTags,
+    sortingTags,
     isGroupingActive,
+    isSortingActive,
     logRef,
     groupingIntervalRef,
+    sortingIntervalRef,
 
     // Methods
     connect,
@@ -212,6 +273,8 @@ export const useRfid = () => {
     setPowerLevel,
     startGrouping,
     stopGrouping,
+    startSorting, // ⬅️ expose
+    stopSorting,
     isRfidAvailable,
   };
 };
