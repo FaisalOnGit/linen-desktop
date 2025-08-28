@@ -7,61 +7,159 @@ const {
   shell,
 } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const { Worker } = require("worker_threads");
-const edge = require("electron-edge-js");
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
-// Path ke DLL RFID
-const dllPath = path.join(__dirname, "lib", "ZebraLib.dll");
+// Function to get correct DLL path
+function getDllPath() {
+  let dllPath;
 
-// Edge functions untuk RFID
-const connect = edge.func({
-  assemblyFile: dllPath,
-  typeName: "ZebraLib.RfidWrapper",
-  methodName: "Connect",
-});
+  if (isDev) {
+    // Development mode
+    dllPath = path.join(__dirname, "lib", "ZebraLib.dll");
+  } else {
+    // Production mode - check multiple possible locations
+    const possiblePaths = [
+      // From executable directory (extraFiles)
+      path.join(path.dirname(process.execPath), "ZebraLib.dll"),
+      // From extraResources
+      path.join(process.resourcesPath, "lib", "ZebraLib.dll"),
+      // From app directory
+      path.join(__dirname, "lib", "ZebraLib.dll"),
+      // From parent directory
+      path.join(path.dirname(__dirname), "lib", "ZebraLib.dll"),
+      // From resources directory
+      path.join(
+        path.dirname(process.execPath),
+        "resources",
+        "lib",
+        "ZebraLib.dll"
+      ),
+    ];
 
-const startInventory = edge.func({
-  assemblyFile: dllPath,
-  typeName: "ZebraLib.RfidWrapper",
-  methodName: "StartInventory",
-});
+    for (const possiblePath of possiblePaths) {
+      console.log("Checking path:", possiblePath);
+      if (fs.existsSync(possiblePath)) {
+        dllPath = possiblePath;
+        console.log("Found DLL at:", dllPath);
+        break;
+      }
+    }
 
-const stopInventory = edge.func({
-  assemblyFile: dllPath,
-  typeName: "ZebraLib.RfidWrapper",
-  methodName: "StopInventory",
-});
+    if (!dllPath) {
+      // Debug info
+      console.error("=== DLL Path Debug Info ===");
+      console.error("__dirname:", __dirname);
+      console.error("process.execPath:", process.execPath);
+      console.error("process.resourcesPath:", process.resourcesPath);
+      console.error("app.getAppPath():", app.getAppPath());
 
-const disconnect = edge.func({
-  assemblyFile: dllPath,
-  typeName: "ZebraLib.RfidWrapper",
-  methodName: "Disconnect",
-});
+      // List files in resource directory
+      try {
+        console.error(
+          "Files in resourcesPath:",
+          fs.readdirSync(process.resourcesPath)
+        );
+        const libDir = path.join(process.resourcesPath, "lib");
+        if (fs.existsSync(libDir)) {
+          console.error("Files in lib directory:", fs.readdirSync(libDir));
+        }
+      } catch (err) {
+        console.error("Error listing files:", err);
+      }
 
-const getTags = edge.func({
-  assemblyFile: dllPath,
-  typeName: "ZebraLib.RfidWrapper",
-  methodName: "GetTags",
-});
+      throw new Error("ZebraLib.dll not found in any expected location");
+    }
+  }
 
-const clearTags = edge.func({
-  assemblyFile: dllPath,
-  typeName: "ZebraLib.RfidWrapper",
-  methodName: "ClearTags",
-});
+  console.log("Using DLL path:", dllPath);
+  console.log("DLL exists:", fs.existsSync(dllPath));
 
-const setPower = edge.func({
-  assemblyFile: dllPath,
-  typeName: "ZebraLib.RfidWrapper",
-  methodName: "SetPower",
-});
+  return dllPath;
+}
+
+// Initialize DLL path and edge functions
+let dllPath;
+let connect,
+  startInventory,
+  stopInventory,
+  disconnect,
+  getTags,
+  clearTags,
+  setPower;
+
+function initializeRfidFunctions() {
+  try {
+    dllPath = getDllPath();
+    const edge = require("electron-edge-js");
+
+    // Set .NET Framework version untuk edge-js
+    process.env.EDGE_USE_CORECLR = "0"; // Force menggunakan .NET Framework, bukan .NET Core
+
+    // Edge functions untuk RFID dengan explicit .NET Framework config
+    connect = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "Connect",
+      sync: false, // Pastikan async
+    });
+
+    startInventory = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "StartInventory",
+      sync: false,
+    });
+
+    stopInventory = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "StopInventory",
+      sync: false,
+    });
+
+    disconnect = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "Disconnect",
+      sync: false,
+    });
+
+    getTags = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "GetTags",
+      sync: false,
+    });
+
+    clearTags = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "ClearTags",
+      sync: false,
+    });
+
+    setPower = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "SetPower",
+      sync: false,
+    });
+
+    console.log("RFID functions initialized successfully");
+  } catch (error) {
+    console.error("Error initializing RFID functions:", error);
+    throw error;
+  }
+}
 
 // RFID State management
 let isConnected = false;
 let isInventoryRunning = false;
 let mainWindow = null;
+let rfidInitialized = false;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -128,6 +226,15 @@ function createWindow() {
 
 // RFID IPC Handlers
 ipcMain.handle("rfid-connect", async (event, config) => {
+  if (!rfidInitialized) {
+    try {
+      initializeRfidFunctions();
+      rfidInitialized = true;
+    } catch (error) {
+      throw new Error(`Failed to initialize RFID: ${error.message}`);
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const { ip, port } = config;
 
@@ -147,6 +254,10 @@ ipcMain.handle("rfid-connect", async (event, config) => {
 });
 
 ipcMain.handle("rfid-start-inventory", async () => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
   return new Promise((resolve, reject) => {
     if (!isConnected) {
       reject(new Error("Not connected to RFID reader"));
@@ -174,6 +285,10 @@ ipcMain.handle("rfid-start-inventory", async () => {
 });
 
 ipcMain.handle("rfid-stop-inventory", async () => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
   return new Promise((resolve, reject) => {
     if (!isInventoryRunning) {
       resolve("Inventory not running");
@@ -195,6 +310,10 @@ ipcMain.handle("rfid-stop-inventory", async () => {
 });
 
 ipcMain.handle("rfid-disconnect", async () => {
+  if (!rfidInitialized) {
+    return "RFID not initialized";
+  }
+
   return new Promise((resolve, reject) => {
     if (!isConnected) {
       resolve("Not connected");
@@ -217,6 +336,10 @@ ipcMain.handle("rfid-disconnect", async () => {
 });
 
 ipcMain.handle("rfid-get-tags", async () => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
   return new Promise((resolve, reject) => {
     getTags(null, (err, res) => {
       if (err) {
@@ -230,6 +353,10 @@ ipcMain.handle("rfid-get-tags", async () => {
 });
 
 ipcMain.handle("rfid-clear-tags", async () => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
   return new Promise((resolve, reject) => {
     clearTags(null, (err, res) => {
       if (err) {
@@ -243,6 +370,10 @@ ipcMain.handle("rfid-clear-tags", async () => {
 });
 
 ipcMain.handle("rfid-set-power", async (event, { antennaId = 1, power }) => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
   return new Promise((resolve, reject) => {
     if (!isConnected) {
       reject(new Error("Not connected to RFID reader"));
@@ -266,6 +397,7 @@ ipcMain.handle("rfid-status", async () => {
   return {
     connected: isConnected,
     inventoryRunning: isInventoryRunning,
+    initialized: rfidInitialized,
   };
 });
 
@@ -286,7 +418,7 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   // Clean disconnect RFID before closing
-  if (isConnected) {
+  if (isConnected && rfidInitialized) {
     disconnect(null, (err, res) => {
       console.log("App closing - RFID disconnected");
       if (process.platform !== "darwin") {
@@ -301,7 +433,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  if (isConnected) {
+  if (isConnected && rfidInitialized) {
     try {
       disconnect(null, () => {
         console.log("Force disconnect RFID on app quit");
