@@ -2,7 +2,7 @@ import React from "react";
 
 const RegisterPage = () => {
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
+    <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
       <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
         Register Linen
       </h2>

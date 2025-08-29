@@ -22,7 +22,7 @@ const GroupingPage = ({ rfidHook }) => {
       : null;
 
   return (
-    <div>
+    <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         <h1 className="text-2xl font-semibold text-primary">Grouping</h1>
       </div>
