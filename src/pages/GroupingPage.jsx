@@ -15,7 +15,6 @@ const GroupingPage = ({ rfidHook }) => {
     setIsRunning(!isRunning);
   };
 
-  // Ambil tag terakhir (kalau ada)
   const lastTag =
     groupingTags && groupingTags.length > 0
       ? groupingTags[groupingTags.length - 1]

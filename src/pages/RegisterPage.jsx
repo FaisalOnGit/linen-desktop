@@ -1,119 +1,193 @@
-import React from "react";
+import React, { useState } from "react";
+import { Play, CircleStop } from "lucide-react"; // ✅ Import ikon
 
 const RegisterPage = () => {
-  return (
-    <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-        Register Linen
-      </h2>
+  const [formData, setFormData] = useState({
+    customerId: "",
+    linenId: "",
+    rfidRegisterDescription: "",
+    locationId: "",
+    epc: "",
+    roomId: "",
+  });
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">
-            Linen Information
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                EPC Tag ID
-              </label>
-              <input
-                type="text"
-                placeholder="Scan or enter EPC tag"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Linen Type
-              </label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent">
-                <option>Bed Sheet</option>
-                <option>Pillow Case</option>
-                <option>Towel</option>
-                <option>Blanket</option>
-                <option>Patient Gown</option>
-                <option>Surgical Drape</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Size
-              </label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent">
-                <option>Small</option>
-                <option>Medium</option>
-                <option>Large</option>
-                <option>Extra Large</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Color
-              </label>
-              <input
-                type="text"
-                placeholder="Enter color"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department
-              </label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent">
-                <option>General Ward</option>
-                <option>ICU</option>
-                <option>Surgery</option>
-                <option>Emergency</option>
-                <option>Maternity</option>
-                <option>Pediatric</option>
-              </select>
-            </div>
-            <button className="w-full bg-blue-800 hover:bg-blue-400 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+  const [isConnected, setIsConnected] = useState(true); // ✅ sementara true (anggap device terkoneksi)
+  const [isInventoryActive, setIsInventoryActive] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    const payload = {
+      customerId: formData.customerId,
+      linenId: formData.linenId,
+      rfidRegisterDescription: formData.rfidRegisterDescription,
+      locationId: formData.locationId,
+      linens: [
+        {
+          epc: formData.epc,
+          roomId: formData.roomId,
+        },
+      ],
+    };
+
+    console.log("Payload dikirim:", payload);
+    // TODO: fetch ke API register_rfid
+  };
+
+  const handleScan = () => {
+    if (!isConnected) {
+      alert("Device belum terkoneksi!");
+      return;
+    }
+
+    if (isInventoryActive) {
+      // Stop Inventory
+      setIsInventoryActive(false);
+      alert("Inventory dihentikan ❌");
+    } else {
+      // Start Inventory
+      setIsInventoryActive(true);
+      alert("Inventory dimulai 🚀");
+    }
+  };
+
+  return (
+    <div className="font-poppins">
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <h1 className="text-2xl font-semibold text-primary">Register Linen</h1>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        >
+          {/* Customer ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Customer ID
+            </label>
+            <input
+              type="text"
+              name="customerId"
+              value={formData.customerId}
+              onChange={handleChange}
+              placeholder="Masukkan Customer ID"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+          </div>
+
+          {/* Linen ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Linen ID
+            </label>
+            <input
+              type="text"
+              name="linenId"
+              value={formData.linenId}
+              onChange={handleChange}
+              placeholder="Masukkan Linen ID"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+          </div>
+
+          {/* RFID Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              RFID Register Description
+            </label>
+            <textarea
+              name="rfidRegisterDescription"
+              value={formData.rfidRegisterDescription}
+              onChange={handleChange}
+              placeholder="Deskripsi registrasi RFID"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent h-[100px]"
+            ></textarea>
+          </div>
+
+          {/* Location ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location ID
+            </label>
+            <input
+              type="text"
+              name="locationId"
+              value={formData.locationId}
+              onChange={handleChange}
+              placeholder="Masukkan Location ID"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+          </div>
+
+          {/* EPC + Scan Button */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              EPC
+            </label>
+
+            {/* Input EPC */}
+            <input
+              type="text"
+              name="epc"
+              value={formData.epc}
+              onChange={handleChange}
+              placeholder="Scan / masukkan EPC"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+
+            {/* Tombol Scan */}
+            <button
+              type="button" // ✅ Supaya tidak submit form
+              onClick={handleScan}
+              className={`mt-2 w-full px-6 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors duration-200 ${
+                !isConnected
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : isInventoryActive
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "bg-primary text-white hover:bg-blue-700"
+              }`}
+            >
+              {isInventoryActive ? (
+                <CircleStop size={16} />
+              ) : (
+                <Play size={16} />
+              )}
+              <span>{isInventoryActive ? "Stop" : "Scan"}</span>
+            </button>
+          </div>
+
+          {/* Room ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Room ID
+            </label>
+            <input
+              type="text"
+              name="roomId"
+              value={formData.roomId}
+              onChange={handleChange}
+              placeholder="Masukkan Room ID"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+          </div>
+
+          {/* Submit Button full width */}
+          <div className="lg:col-span-2">
+            <button
+              type="submit"
+              className="w-full bg-primary hover:bg-blue-400 text-white px-4 py-3 rounded-lg font-medium"
+            >
               Register Linen
             </button>
           </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">
-            Quick Actions
-          </h3>
-          <div className="space-y-3 mb-6">
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-              Scan New Tag
-            </button>
-            <button className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
-              Bulk Register
-            </button>
-            <button className="w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors">
-              Import from CSV
-            </button>
-          </div>
-
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">
-            Recent Registrations
-          </h3>
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center p-2 bg-white rounded border">
-                <div>
-                  <span className="font-medium">EPC123456</span>
-                  <span className="text-sm text-gray-600 ml-2">Bed Sheet</span>
-                </div>
-                <span className="text-xs text-gray-500">2 min ago</span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-white rounded border">
-                <div>
-                  <span className="font-medium">EPC789012</span>
-                  <span className="text-sm text-gray-600 ml-2">Towel</span>
-                </div>
-                <span className="text-xs text-gray-500">5 min ago</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   );

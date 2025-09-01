@@ -5,10 +5,14 @@ import { Play, Square } from "lucide-react";
 const SortingLinenPage = ({ rfidHook }) => {
   const { sortingTags, startSorting, stopSorting } = rfidHook;
   const [isRunning, setIsRunning] = useState(false);
+  const [tableMode, setTableMode] = useState("double"); // "single" atau "double"
 
   // Pisahkan data berdasarkan antenna
   const antenna1Tags = sortingTags?.filter((tag) => tag.antenna === 1) || [];
   const antenna2Tags = sortingTags?.filter((tag) => tag.antenna === 2) || [];
+
+  // Gabungkan semua tags untuk mode single
+  const allTags = sortingTags || [];
 
   const handleToggle = () => {
     if (isRunning) {
@@ -19,10 +23,43 @@ const SortingLinenPage = ({ rfidHook }) => {
     setIsRunning(!isRunning);
   };
 
+  const handleTableModeChange = (mode) => {
+    setTableMode(mode);
+  };
+
   return (
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         <h1 className="text-2xl font-semibold text-primary">Sorting Linen</h1>
+      </div>
+
+      {/* Toggle Single/Double Table */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div className="flex items-center gap-4">
+          <span className="text-gray-700 font-medium">Mode Tabel:</span>
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => handleTableModeChange("single")}
+              className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                tableMode === "single"
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              Single
+            </button>
+            <button
+              onClick={() => handleTableModeChange("double")}
+              className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                tableMode === "double"
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              Double
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Info Section with button top-right */}
@@ -54,12 +91,12 @@ const SortingLinenPage = ({ rfidHook }) => {
         {/* Info Grid */}
         <div className="grid grid-cols-1 gap-y-2 font-bold">
           <div className="flex items-center">
-            <label className="text-gray-600 w-20">RFID</label>
+            <label className="text-gray-600 w-24">RFID</label>
             <span className="mx-3">:</span>
             <span className="text-gray-400">−</span>
           </div>
           <div className="flex items-center">
-            <label className="text-gray-600 w-20">Linen</label>
+            <label className="text-gray-600 w-24">Linen</label>
             <span className="mx-3">:</span>
             <span className="text-gray-400">−</span>
           </div>
@@ -69,35 +106,48 @@ const SortingLinenPage = ({ rfidHook }) => {
             <span className="text-gray-400">−</span>
           </div>
           <div className="flex items-center">
-            <label className="text-gray-600 w-20">Ruangan</label>
+            <label className="text-gray-600 w-24">Ruangan</label>
             <span className="mx-3">:</span>
             <span className="text-gray-400">−</span>
           </div>
         </div>
       </div>
 
-      {/* Grid untuk 2 tabel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tabel Antenna 1 */}
+      {/* Conditional rendering berdasarkan tableMode */}
+      {tableMode === "single" ? (
+        // Single Table Mode
         <div>
           <div className="bg-blue-50 rounded-t-lg p-3 border-b border-blue-200">
             <h3 className="text-lg font-semibold text-primary">
-              Meja Kiri ({antenna1Tags.length} items)
+              Semua Data ({allTags.length} items)
             </h3>
           </div>
-          <SortingTable sortingTags={antenna1Tags} antennaNumber={1} />
+          <SortingTable sortingTags={allTags} antennaNumber="all" />
         </div>
+      ) : (
+        // Double Table Mode
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Tabel Antenna 1 */}
+          <div>
+            <div className="bg-blue-50 rounded-t-lg p-3 border-b border-blue-200">
+              <h3 className="text-lg font-semibold text-primary">
+                Meja Kiri ({antenna1Tags.length} items)
+              </h3>
+            </div>
+            <SortingTable sortingTags={antenna1Tags} antennaNumber={1} />
+          </div>
 
-        {/* Tabel Antenna 2 */}
-        <div>
-          <div className="bg-green-50 rounded-t-lg p-3 border-b border-green-200">
-            <h3 className="text-lg font-semibold text-primary">
-              Meja Kanan ({antenna2Tags.length} items)
-            </h3>
+          {/* Tabel Antenna 2 */}
+          <div>
+            <div className="bg-green-50 rounded-t-lg p-3 border-b border-green-200">
+              <h3 className="text-lg font-semibold text-primary">
+                Meja Kanan ({antenna2Tags.length} items)
+              </h3>
+            </div>
+            <SortingTable sortingTags={antenna2Tags} antennaNumber={2} />
           </div>
-          <SortingTable sortingTags={antenna2Tags} antennaNumber={2} />
         </div>
-      </div>
+      )}
     </div>
   );
 };

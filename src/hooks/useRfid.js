@@ -28,59 +28,70 @@ export const useRfid = () => {
 
   const isRfidAvailable = typeof window !== "undefined" && window.rfidAPI;
 
-  const connect = async () => {
+  const connect = async (ipAddress, portNumber) => {
     if (!isRfidAvailable) {
       log("❌ RFID API not available");
-      return;
+      return false;
     }
 
     try {
-      const res = await window.rfidAPI.connect({ ip, port });
+      const res = await window.rfidAPI.connect({
+        ip: ipAddress,
+        port: portNumber,
+      });
       log("✅ Connected: " + JSON.stringify(res));
+      return true;
     } catch (err) {
       log("❌ Connect Error: " + err.message);
-    }
-  };
-
-  const startInventory = async () => {
-    if (!isRfidAvailable) {
-      log("❌ RFID API not available");
-      return;
-    }
-
-    try {
-      const res = await window.rfidAPI.startInventory();
-      log("▶️ Start Inventory: " + JSON.stringify(res));
-    } catch (err) {
-      log("❌ Start Error: " + err.message);
-    }
-  };
-
-  const stopInventory = async () => {
-    if (!isRfidAvailable) {
-      log("❌ RFID API not available");
-      return;
-    }
-
-    try {
-      const res = await window.rfidAPI.stopInventory();
-      log("⏹ Stop Inventory: " + JSON.stringify(res));
-    } catch (err) {
-      log("❌ Stop Error: " + err.message);
+      return false;
     }
   };
 
   const disconnect = async () => {
     if (!isRfidAvailable) {
       log("❌ RFID API not available");
-      return;
+      return false;
     }
 
     try {
       const res = await window.rfidAPI.disconnect();
       log("🔌 Disconnected: " + JSON.stringify(res));
+      return true;
     } catch (err) {
       log("❌ Disconnect Error: " + err.message);
+      return false;
+    }
+  };
+
+  const startInventory = async () => {
+    if (!isRfidAvailable) {
+      log("❌ RFID API not available");
+      return false;
+    }
+
+    try {
+      const res = await window.rfidAPI.startInventory();
+      log("▶️ Start Inventory: " + JSON.stringify(res));
+      return true;
+    } catch (err) {
+      log("❌ Start Error: " + err.message);
+      return false;
+    }
+  };
+
+  const stopInventory = async () => {
+    if (!isRfidAvailable) {
+      log("❌ RFID API not available");
+      return false;
+    }
+
+    try {
+      const res = await window.rfidAPI.stopInventory();
+      log("⏹ Stop Inventory: " + JSON.stringify(res));
+      return true;
+    } catch (err) {
+      log("❌ Stop Error: " + err.message);
+      return false;
     }
   };
 
@@ -127,15 +138,25 @@ export const useRfid = () => {
     }
   };
 
-  const setPowerLevel = async () => {
+  const setPowerLevel = async (antennaId, powerLevel) => {
     if (!isRfidAvailable) {
       log("❌ RFID API not available");
       return;
     }
 
     try {
-      const res = await window.rfidAPI.setPower({ antennaId: 1, power });
-      log("⚡ Set Power: " + JSON.stringify(res));
+      // Convert antennaId to integer to ensure it's sent as ushort
+      const antennaIdInt = parseInt(antennaId);
+      const powerLevelInt = parseInt(powerLevel);
+
+      // Debug log to check values before sending
+      log(`🔧 Setting Antenna ${antennaIdInt} to ${powerLevelInt} dBm`);
+
+      const res = await window.rfidAPI.setPower({
+        antennaId: antennaIdInt,
+        power: powerLevelInt,
+      });
+      log(`⚡ Set Power Result: ` + JSON.stringify(res));
     } catch (err) {
       log("❌ SetPower Error: " + err.message);
     }
@@ -264,16 +285,16 @@ export const useRfid = () => {
 
     // Methods
     connect,
+    disconnect,
     startInventory,
     stopInventory,
-    disconnect,
     getTags,
     clearTags,
     getStatus,
     setPowerLevel,
     startGrouping,
     stopGrouping,
-    startSorting, // ⬅️ expose
+    startSorting,
     stopSorting,
     isRfidAvailable,
   };

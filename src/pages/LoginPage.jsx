@@ -3,18 +3,46 @@ import { Eye, EyeOff } from "lucide-react";
 
 const LoginPage = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("sooyaa445566@email.com");
+  const [email, setEmail] = useState("admin@nci.co.id");
   const [password, setPassword] = useState("mypassword123");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // di sini nanti bisa tambahkan validasi / API login
-    if (email && password) {
-      onLoginSuccess(); // 👈 arahkan ke halaman utama
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        "https://app.nci.co.id/base_linen/api/Auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        onLoginSuccess();
+      } else {
+        setError(data.message || "Login gagal, periksa email/password.");
+      }
+    } catch (err) {
+      setError("Terjadi kesalahan. Coba lagi nanti.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -25,16 +53,15 @@ const LoginPage = ({ onLoginSuccess }) => {
         background: "linear-gradient(to bottom, #ffffff 0%, #426BA8 100%)",
       }}
     >
-      {/* Logo */}
       <div className="absolute top-8 left-8">
         <img src="/login.png" alt="OSLA Logo" className="w-20 h-20" />
       </div>
 
-      {/* Login Form */}
       <div className="w-full max-w-md">
         <div className="bg-white rounded-3xl p-8 shadow-lg">
-          <h1 className="text-2xl font-semibold text-gray-800 text-center mb-8">
-            Welcome back
+          <h1 className="text-2xl font-semibold text-primary text-center mb-8">
+            Selamat Datang
+            <span className="text-orange-500"> Admin!</span>
           </h1>
 
           <form onSubmit={handleLogin}>
@@ -87,40 +114,25 @@ const LoginPage = ({ onLoginSuccess }) => {
               </div>
             </div>
 
-            {/* Forgot Password */}
-            <div className="text-right mb-6">
-              <a
-                href="#"
-                className="text-gray-500 text-sm hover:text-blue-600 transition-colors"
-              >
-                Forgot password?
-              </a>
-            </div>
+            {/* Error Message */}
+            {error && (
+              <p className="text-red-500 text-sm mt-2 mb-4 text-center">
+                {error}
+              </p>
+            )}
 
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full bg-primary text-white font-medium py-3 px-4 rounded-xl transition-colors duration-200 mb-6"
+              disabled={loading}
+              className="w-full bg-primary text-white font-medium py-3 px-4 rounded-xl transition-colors duration-200 mb-6 disabled:opacity-50"
               style={{
                 backgroundColor: "#426BA8",
               }}
             >
-              Login
+              {loading ? "Loading..." : "Login"}
             </button>
           </form>
-        </div>
-
-        {/* Sign Up Link */}
-        <div className="text-center mt-6">
-          <p className="text-gray-700">
-            Don't have an account yet?{" "}
-            <a
-              href="#"
-              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
-            >
-              Sign up
-            </a>
-          </p>
         </div>
       </div>
     </div>
