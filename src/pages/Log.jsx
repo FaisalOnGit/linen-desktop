@@ -12,6 +12,39 @@ const LoginPage = ({ onLoginSuccess }) => {
     setShowPassword(!showPassword);
   };
 
+  // Helper function untuk menyimpan token
+  const saveToken = async (token) => {
+    try {
+      // Cek apakah berjalan di Electron
+      if (window.electronAPI && window.electronAPI.setToken) {
+        // Gunakan Electron IPC
+        const result = await window.electronAPI.setToken(token);
+        if (result.success) {
+          console.log("Token saved via Electron IPC");
+          return true;
+        } else {
+          throw new Error(result.error || "Failed to save token");
+        }
+      } else {
+        // Fallback ke localStorage untuk web
+        localStorage.setItem("token", token);
+        console.log("Token saved to localStorage");
+        return true;
+      }
+    } catch (err) {
+      console.error("Failed to save token:", err);
+      // Fallback ke localStorage jika Electron API gagal
+      try {
+        localStorage.setItem("token", token);
+        console.log("Token saved to localStorage (fallback)");
+        return true;
+      } catch (fallbackErr) {
+        console.error("Fallback save also failed:", fallbackErr);
+        return false;
+      }
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -36,7 +69,26 @@ const LoginPage = ({ onLoginSuccess }) => {
 
       if (response.ok && data.success) {
         if (data.token) {
-          localStorage.setItem("token", data.token);
+          const tokenSaved = await saveToken(data.token);
+          if (!tokenSaved) {
+            setError(
+              "Token berhasil diterima, tapi gagal disimpan. Silakan login ulang jika diperlukan."
+            );
+            return;
+          }
+
+          // Simpan user data jika tersedia (optional)
+          if (
+            data.user &&
+            window.electronAPI &&
+            window.electronAPI.setUserData
+          ) {
+            try {
+              await window.electronAPI.setUserData(data.user);
+            } catch (userDataErr) {
+              console.error("Failed to save user data:", userDataErr);
+            }
+          }
         }
 
         onLoginSuccess();
@@ -44,6 +96,7 @@ const LoginPage = ({ onLoginSuccess }) => {
         setError(data.message || "Login gagal, periksa email/password.");
       }
     } catch (err) {
+      console.error("Login error:", err);
       setError("Terjadi kesalahan. Coba lagi nanti.");
     } finally {
       setLoading(false);
@@ -68,7 +121,17 @@ const LoginPage = ({ onLoginSuccess }) => {
             <span className="text-orange-500"> Admin!</span>
           </h1>
 
-          <form onSubmit={handleLogin}>
+          {/* Debug Info */}
+          <div className="mb-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
+            Running in: {window.electronAPI ? "Electron" : "Browser"}
+            <br />
+            User Agent:{" "}
+            {navigator.userAgent.includes("Electron")
+              ? "Electron detected"
+              : "Standard browser"}
+          </div>
+
+          <div onSubmit={handleLogin}>
             {/* Email Field */}
             <div className="mb-6">
               <label
@@ -129,6 +192,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
+              onClick={handleLogin}
               className="w-full bg-primary text-white font-medium py-3 px-4 rounded-xl transition-colors duration-200 mb-6 disabled:opacity-50"
               style={{
                 backgroundColor: "#426BA8",
@@ -136,7 +200,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             >
               {loading ? "Loading..." : "Login"}
             </button>
-          </form>
+          </div>
         </div>
       </div>
     </div>
