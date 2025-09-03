@@ -26,41 +26,67 @@ const RegisterPage = () => {
   const fetchCustomers = async (searchTerm = "") => {
     setLoadingCustomers(true);
     try {
+      // ✅ Ambil token dari storage
+      const token = await window.authAPI.getToken();
+
+      if (!token) {
+        console.error("No token found, user needs to login");
+        setCustomers([]);
+        // Optional: redirect to login or show error
+        return;
+      }
+
       const response = await fetch(
         "https://app.nci.co.id/base_linen/api/Master/customer",
         {
           headers: {
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJVU1IwMDAwMSIsInVuaXF1ZV9uYW1lIjoiQWRtaW4gUmlzZXQiLCJlbWFpbCI6ImFkbWluQG5jaS5jby5pZCIsImZpcnN0TmFtZSI6IkFkbWluIiwibGFzdE5hbWUiOiJSaXNldCIsIm5iZiI6MTc1Njc5NTk2NywiZXhwIjoxNzU2Nzk5NTY3LCJpYXQiOjE3NTY3OTU5NjcsImlzcyI6IlJGSURfTElORU5fQVBJIiwiYXVkIjoiUkZJRF9MSU5FTl9BUEkifQ.0KGikCTURuM6u4I0RyAb6aZFFP3n1FxzcNFnK9HR3JM",
+            Authorization: `Bearer ${token}`, // ✅ Gunakan token dinamis
             "Content-Type": "application/json",
           },
         }
       );
+
       if (response.ok) {
         const data = await response.json();
-        let customersData = data.data || []; // ✅ ambil array dari `data`
+        console.log("Customers response:", data); // Debug log
+
+        let customersData = data.data || data || []; // ✅ Handle multiple response formats
         let filteredCustomers = customersData;
 
-        // Filter berdasarkan search term jika ada
-        if (searchTerm.trim()) {
-          filteredCustomers = data.filter(
+        // ✅ Filter berdasarkan search term jika ada
+        if (searchTerm.trim() && Array.isArray(customersData)) {
+          filteredCustomers = customersData.filter(
             (customer) =>
               customer.customerName
-                .toLowerCase()
+                ?.toLowerCase()
                 .includes(searchTerm.toLowerCase()) ||
               customer.customerId
-                .toLowerCase()
+                ?.toLowerCase()
                 .includes(searchTerm.toLowerCase())
           );
         }
 
         setCustomers(filteredCustomers);
       } else {
-        console.error("Failed to fetch customers");
+        console.error("Failed to fetch customers, status:", response.status);
+
+        // ✅ Handle specific HTTP errors
+        if (response.status === 401) {
+          console.error("Token expired or invalid");
+          // Optional: clear token and redirect to login
+          await window.authAPI.clearToken();
+        }
+
         setCustomers([]);
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
+
+      // ✅ Handle different types of errors
+      if (error.name === "TypeError" && error.message.includes("fetch")) {
+        console.error("Network error - check internet connection");
+      }
+
       setCustomers([]);
     } finally {
       setLoadingCustomers(false);
@@ -70,12 +96,12 @@ const RegisterPage = () => {
   const fetchLinens = async (searchTerm = "") => {
     setLoadingLinens(true);
     try {
+      const token = await window.authAPI.getToken();
       const response = await fetch(
         "https://app.nci.co.id/base_linen/api/Master/linen",
         {
           headers: {
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJVU1IwMDAwMSIsInVuaXF1ZV9uYW1lIjoiQWRtaW4gUmlzZXQiLCJlbWFpbCI6ImFkbWluQG5jaS5jby5pZCIsImZpcnN0TmFtZSI6IkFkbWluIiwibGFzdE5hbWUiOiJSaXNldCIsIm5iZiI6MTc1Njc5NTk2NywiZXhwIjoxNzU2Nzk5NTY3LCJpYXQiOjE3NTY3OTU5NjcsImlzcyI6IlJGSURfTElORU5fQVBJIiwiYXVkIjoiUkZJRF9MSU5FTl9BUEkifQ.0KGikCTURuM6u4I0RyAb6aZFFP3n1FxzcNFnK9HR3JM",
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
@@ -109,7 +135,6 @@ const RegisterPage = () => {
     }
   };
 
-  // Load customers on component mount
   useEffect(() => {
     fetchCustomers();
     fetchLinens();

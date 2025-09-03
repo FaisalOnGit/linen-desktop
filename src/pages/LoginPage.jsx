@@ -32,19 +32,56 @@ const LoginPage = ({ onLoginSuccess }) => {
         }
       );
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log("Login response:", data); // Debug log
 
-      if (response.ok && data.success) {
-        if (data.token) {
-          localStorage.setItem("token", data.token);
+      // Handle successful login
+      if (data.success === true || data.status === "success") {
+        if (data.token || data.data?.token) {
+          const token = data.token || data.data?.token;
+
+          try {
+            // Save token via preload API
+            await window.authAPI.setToken(token);
+            console.log("Token saved successfully");
+
+            // Call success callback
+            onLoginSuccess();
+          } catch (tokenError) {
+            console.error("Error saving token:", tokenError);
+            setError("Gagal menyimpan token. Coba lagi.");
+          }
+        } else {
+          console.warn("Login successful but no token received");
+          setError("Login berhasil tetapi tidak menerima token.");
         }
-
-        onLoginSuccess();
       } else {
-        setError(data.message || "Login gagal, periksa email/password.");
+        // Handle login failure
+        const errorMessage =
+          data.message ||
+          data.error ||
+          data.errors?.[0] ||
+          "Login gagal, periksa email/password.";
+        setError(errorMessage);
       }
     } catch (err) {
-      setError("Terjadi kesalahan. Coba lagi nanti.");
+      console.error("Login error:", err);
+
+      // Handle different types of errors
+      if (err.name === "TypeError" && err.message.includes("fetch")) {
+        setError("Tidak dapat terhubung ke server. Periksa koneksi internet.");
+      } else if (err.message.includes("HTTP error")) {
+        setError("Server error. Coba lagi nanti.");
+      } else if (err.name === "SyntaxError") {
+        setError("Response server tidak valid.");
+      } else {
+        setError("Terjadi kesalahan. Coba lagi nanti.");
+      }
     } finally {
       setLoading(false);
     }
