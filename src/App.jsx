@@ -7,9 +7,10 @@ import GroupingPage from "./pages/GroupingPage";
 import SettingPage from "./pages/SettingPage";
 import { useRfid } from "./hooks/useRfid";
 import LoginPage from "./pages/LoginPage";
+import LinenCleanPage from "./pages/LinenBersih";
 
 const App = () => {
-  const [activePage, setActivePage] = useState("login"); // 👈 default ke login
+  const [activePage, setActivePage] = useState("login");
   const rfidHook = useRfid();
 
   const handleNavigation = (page) => {
@@ -31,9 +32,9 @@ const App = () => {
       case "reader":
         return <SettingPage rfidHook={rfidHook} />;
       case "sorting":
-        return <RegisterPage />;
+        return <RegisterPage rfidHook={rfidHook} />;
       case "register":
-        return <SortingLinenPage rfidHook={rfidHook} />;
+        return <LinenCleanPage rfidHook={rfidHook} />;
       case "grouping":
         return <GroupingPage rfidHook={rfidHook} />;
       default:

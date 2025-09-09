@@ -163,10 +163,11 @@ let rfidInitialized = false;
 
 function createWindow() {
   const win = new BrowserWindow({
-    title: "RFID Dashboard - Choralith",
+    title: "RFID Dashboard",
     icon: path.join(__dirname, "assets", "icon.png"),
     width: 1200,
     height: 800,
+    autoHideMenuBar: false,
     webPreferences: {
       sandbox: false,
       preload: path.join(__dirname, "preload.js"),

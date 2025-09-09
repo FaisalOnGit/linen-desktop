@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 const LoginPage = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("admin@nci.co.id");
-  const [password, setPassword] = useState("mypassword123");
+  const [password, setPassword] = useState("#Linen123");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 

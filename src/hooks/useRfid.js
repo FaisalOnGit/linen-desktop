@@ -1,4 +1,3 @@
-// hooks/useRfid.js
 import { useState, useRef, useCallback } from "react";
 
 export const useRfid = () => {
@@ -12,10 +11,12 @@ export const useRfid = () => {
   const [sortingTags, setSortingTags] = useState([]);
   const [isGroupingActive, setIsGroupingActive] = useState(false);
   const [isSortingActive, setIsSortingActive] = useState(false);
+  const [isRegisterActive, setIsRegisterActive] = useState(false);
 
   const logRef = useRef(null);
   const groupingIntervalRef = useRef(null);
   const sortingIntervalRef = useRef(null);
+  const registerIntervalRef = useRef(null);
 
   const log = useCallback((msg) => {
     setLogs((prev) => prev + msg + "\n");
@@ -163,6 +164,51 @@ export const useRfid = () => {
   };
 
   // ==================
+  // Register
+  // ==================
+
+  const startRegister = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.startInventory();
+      setIsRegisterActive(true);
+
+      registerIntervalRef.current = setInterval(async () => {
+        try {
+          const tagsData = await window.rfidAPI.getTags();
+          setRegisterTags(tagsData);
+        } catch (err) {
+          console.error("Error fetching register tags:", err);
+        }
+      }, 500);
+    } catch (err) {
+      console.error("Error starting register:", err);
+    }
+  };
+
+  const stopRegister = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.stopInventory();
+      setIsRegisterActive(false);
+      if (registerIntervalRef.current) {
+        clearInterval(registerIntervalRef.current);
+        registerIntervalRef.current = null;
+      }
+    } catch (err) {
+      console.error("Error stopping register:", err);
+    }
+  };
+
+  // ==================
   // Grouping
   // ==================
 
@@ -279,9 +325,11 @@ export const useRfid = () => {
     sortingTags,
     isGroupingActive,
     isSortingActive,
+    isRegisterActive,
     logRef,
     groupingIntervalRef,
     sortingIntervalRef,
+    registerIntervalRef,
 
     // Methods
     connect,
@@ -292,6 +340,8 @@ export const useRfid = () => {
     clearTags,
     getStatus,
     setPowerLevel,
+    startRegister,
+    stopRegister,
     startGrouping,
     stopGrouping,
     startSorting,
