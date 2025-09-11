@@ -8,6 +8,7 @@ import SettingPage from "./pages/SettingPage";
 import { useRfid } from "./hooks/useRfid";
 import LoginPage from "./pages/LoginPage";
 import LinenCleanPage from "./pages/LinenBersih";
+import DeliveryPage from "./pages/DeliveryPage";
 
 const App = () => {
   const [activePage, setActivePage] = useState("login");
@@ -37,6 +38,8 @@ const App = () => {
         return <LinenCleanPage rfidHook={rfidHook} />;
       case "grouping":
         return <GroupingPage rfidHook={rfidHook} />;
+      case "delivery":
+        return <DeliveryPage rfidHook={rfidHook} />;
       default:
         return <ReaderPage rfidHook={rfidHook} />;
     }

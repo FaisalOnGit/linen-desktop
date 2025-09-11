@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Play, Plus, Trash2, Square } from "lucide-react";
+import { Play, Plus, Trash2, Square, Truck } from "lucide-react";
 
-const LinenCleanPage = ({ rfidHook }) => {
+const DeliveryPage = ({ rfidHook }) => {
   const {
-    linenBersihTags = [],
-    startLinenBersih,
-    stopLinenBersih,
-    isLinenBersihActive = false,
+    deliveryTags = [],
+    startDelivery,
+    stopDelivery,
+    isDeliveryActive = false,
     isRfidAvailable = false,
   } = rfidHook || {};
 
   const [formData, setFormData] = useState({
     customerId: "",
     customerName: "",
-    linenQty: 0,
+    qty: 0,
+    driverName: "",
+    plateNumber: "",
   });
 
   const [customers, setCustomers] = useState([]);
@@ -164,8 +166,8 @@ const LinenCleanPage = ({ rfidHook }) => {
   }, []);
 
   useEffect(() => {
-    if (linenBersihTags && linenBersihTags.length > 0) {
-      const latestTag = linenBersihTags[linenBersihTags.length - 1];
+    if (deliveryTags && deliveryTags.length > 0) {
+      const latestTag = deliveryTags[deliveryTags.length - 1];
       if (latestTag && latestTag.EPC && !processedTags.has(latestTag.EPC)) {
         setProcessedTags((prev) => new Set([...prev, latestTag.EPC]));
 
@@ -196,13 +198,13 @@ const LinenCleanPage = ({ rfidHook }) => {
         }
       }
     }
-  }, [linenBersihTags, processedTags, linens]);
+  }, [deliveryTags, processedTags, linens]);
 
   useEffect(() => {
     const validLinens = linens.filter((linen) => linen.epc?.trim());
     setFormData((prev) => ({
       ...prev,
-      linenQty: validLinens.length,
+      qty: validLinens.length,
     }));
   }, [linens]);
 
@@ -269,6 +271,16 @@ const LinenCleanPage = ({ rfidHook }) => {
       return;
     }
 
+    if (!formData.driverName.trim()) {
+      alert("Nama driver tidak boleh kosong!");
+      return;
+    }
+
+    if (!formData.plateNumber.trim()) {
+      alert("Nomor plat tidak boleh kosong!");
+      return;
+    }
+
     try {
       // Ambil token
       const token = await window.authAPI.getToken();
@@ -284,7 +296,9 @@ const LinenCleanPage = ({ rfidHook }) => {
       // Buat payload
       const payload = {
         customerId: formData.customerId,
-        linenQty: validLinens.length,
+        qty: validLinens.length,
+        driverName: formData.driverName,
+        plateNumber: formData.plateNumber,
         linens: validLinens.map((linen) => ({
           epc: linen.epc,
           status_id: linen.statusId || 1,
@@ -295,7 +309,7 @@ const LinenCleanPage = ({ rfidHook }) => {
 
       // Kirim request POST
       const response = await fetch(
-        "https://app.nci.co.id/base_linen/api/Process/linen_clean",
+        "https://app.nci.co.id/base_linen/api/Process/delivery",
         {
           method: "POST",
           headers: {
@@ -318,20 +332,22 @@ const LinenCleanPage = ({ rfidHook }) => {
       setFormData({
         customerId: "",
         customerName: "",
-        linenQty: 0,
+        qty: 0,
+        driverName: "",
+        plateNumber: "",
       });
       setLinens([{ epc: "", status_id: 1, loading: false }]);
       setProcessedTags(new Set());
 
       // Stop scanning if active
-      if (isLinenBersihActive) {
-        stopLinenBersih();
+      if (isDeliveryActive) {
+        stopDelivery();
       }
 
-      alert("Proses linen bersih berhasil!");
+      alert("Proses delivery berhasil!");
     } catch (error) {
       console.error("Error submit:", error);
-      alert(`Gagal proses linen bersih: ${error.message}`);
+      alert(`Gagal proses delivery: ${error.message}`);
     }
   };
 
@@ -341,10 +357,10 @@ const LinenCleanPage = ({ rfidHook }) => {
       return;
     }
 
-    if (isLinenBersihActive) {
-      stopLinenBersih();
+    if (isDeliveryActive) {
+      stopDelivery();
     } else {
-      startLinenBersih();
+      startDelivery();
     }
   };
 
@@ -360,6 +376,8 @@ const LinenCleanPage = ({ rfidHook }) => {
         return "bg-red-50 border-red-300 text-red-700";
       case "hilang":
         return "bg-red-50 border-red-300 text-red-700";
+      case "siap kirim":
+        return "bg-blue-50 border-blue-300 text-blue-700";
       default:
         return "bg-gray-50 border-gray-300 text-gray-700";
     }
@@ -368,8 +386,13 @@ const LinenCleanPage = ({ rfidHook }) => {
   return (
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h1 className="text-2xl font-semibold text-primary">Linen Bersih</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <Truck className="text-primary" size={28} />
+          <h1 className="text-2xl font-semibold text-primary">Delivery</h1>
+        </div>
+
         <div className="space-y-6">
+          {/* Customer and Delivery Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -411,8 +434,8 @@ const LinenCleanPage = ({ rfidHook }) => {
               </label>
               <input
                 type="number"
-                name="linenQty"
-                value={formData.linenQty}
+                name="qty"
+                value={formData.qty}
                 readOnly
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 placeholder="Auto-calculated"
@@ -420,6 +443,37 @@ const LinenCleanPage = ({ rfidHook }) => {
               <p className="text-xs text-gray-500 mt-1">
                 Otomatis terhitung dari jumlah EPC yang valid
               </p>
+            </div>
+          </div>
+
+          {/* Driver Information */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nama Driver <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="driverName"
+                value={formData.driverName}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                placeholder="Masukkan nama driver"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nomor Plat <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="plateNumber"
+                value={formData.plateNumber}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                placeholder="Masukkan nomor plat kendaraan"
+              />
             </div>
           </div>
 
@@ -456,13 +510,13 @@ const LinenCleanPage = ({ rfidHook }) => {
                 className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
                   !isRfidAvailable
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : isLinenBersihActive
+                    : isDeliveryActive
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-primary hover:bg-blue-700"
                 }`}
                 disabled={!isRfidAvailable}
               >
-                {isLinenBersihActive ? (
+                {isDeliveryActive ? (
                   <>
                     <Square size={16} />
                     Stop Scan
@@ -478,17 +532,17 @@ const LinenCleanPage = ({ rfidHook }) => {
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    isLinenBersihActive
+                    isDeliveryActive
                       ? "bg-green-500 animate-pulse"
                       : "bg-gray-400"
                   }`}
                 ></div>
                 <span className="text-sm text-gray-600">
-                  {isLinenBersihActive ? "Scanning..." : "Idle"}
+                  {isDeliveryActive ? "Scanning..." : "Idle"}
                 </span>
-                {linenBersihTags.length > 0 && (
+                {deliveryTags.length > 0 && (
                   <span className="text-xs text-blue-600">
-                    ({linenBersihTags.length} tags detected)
+                    ({deliveryTags.length} tags detected)
                   </span>
                 )}
               </div>
@@ -597,16 +651,21 @@ const LinenCleanPage = ({ rfidHook }) => {
               onClick={handleSubmit}
               disabled={
                 !formData.customerId ||
+                !formData.driverName.trim() ||
+                !formData.plateNumber.trim() ||
                 linens.filter((l) => l.epc.trim()).length === 0
               }
-              className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+              className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                 !formData.customerId ||
+                !formData.driverName.trim() ||
+                !formData.plateNumber.trim() ||
                 linens.filter((l) => l.epc.trim()).length === 0
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-primary hover:bg-blue-400 text-white"
               }`}
             >
-              Proses Linen Bersih ({linens.filter((l) => l.epc.trim()).length}{" "}
+              <Truck size={16} />
+              Proses Delivery ({linens.filter((l) => l.epc.trim()).length}{" "}
               items)
             </button>
           </div>
@@ -616,4 +675,4 @@ const LinenCleanPage = ({ rfidHook }) => {
   );
 };
 
-export default LinenCleanPage;
+export default DeliveryPage;

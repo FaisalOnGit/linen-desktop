@@ -13,8 +13,15 @@ const GroupingPage = ({ rfidHook }) => {
 
     setLoading(true);
     try {
+      const token = await window.authAPI.getToken();
       const response = await fetch(
-        `https://app.nci.co.id/base_linen/api/Process/linen_rfid?epc=${epc}`
+        `https://app.nci.co.id/base_linen/api/Process/linen_rfid?epc=${epc}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
 
       if (!response.ok) {

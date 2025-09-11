@@ -290,12 +290,9 @@ const RegisterPage = ({ rfidHook }) => {
 
   return (
     <div className="font-poppins">
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <h1 className="text-2xl font-semibold text-primary">Register Linen</h1>
-      </div>
-
       <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
         <div className="space-y-6">
+        <h1 className="text-xl font-semibold text-primary">Register Linen</h1>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">

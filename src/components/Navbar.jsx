@@ -1,4 +1,3 @@
-import React from "react";
 import logo from "../../public/osla.png";
 
 const Navbar = ({ activePage, onNavigate }) => {
@@ -7,6 +6,7 @@ const Navbar = ({ activePage, onNavigate }) => {
     { id: "sorting", label: "Register Linen" },
     { id: "register", label: "Sorting Linen" },
     { id: "grouping", label: "Grouping Linen" },
+    { id: "delivery", label: "Delivery Linen" },
   ];
 
   return (

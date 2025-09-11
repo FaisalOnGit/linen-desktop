@@ -9,14 +9,20 @@ export const useRfid = () => {
   const [registerTags, setRegisterTags] = useState([]);
   const [groupingTags, setGroupingTags] = useState([]);
   const [sortingTags, setSortingTags] = useState([]);
+  const [deliveryTags, setDeliveryTags] = useState([]);
+  const [linenBersihTags, setLinenBersihTags] = useState([]);
   const [isGroupingActive, setIsGroupingActive] = useState(false);
   const [isSortingActive, setIsSortingActive] = useState(false);
   const [isRegisterActive, setIsRegisterActive] = useState(false);
+  const [isDeliveryActive, setIsDeliveryActive] = useState(false);
+  const [isLinenBersihActive, setIsLinenBersihActive] = useState(false);
 
   const logRef = useRef(null);
   const groupingIntervalRef = useRef(null);
   const sortingIntervalRef = useRef(null);
   const registerIntervalRef = useRef(null);
+  const deliveryIntervalRef = useRef(null);
+  const linenBersihIntervalRef = useRef(null);
 
   const log = useCallback((msg) => {
     setLogs((prev) => prev + msg + "\n");
@@ -310,6 +316,113 @@ export const useRfid = () => {
     }
   };
 
+  // ==================
+  // Delivery
+  // ==================
+
+  const startDelivery = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.startInventory();
+      setIsDeliveryActive(true);
+
+      deliveryIntervalRef.current = setInterval(async () => {
+        try {
+          const tagsData = await window.rfidAPI.getTags();
+          const enrichedTags = tagsData.map((tag) => ({
+            ...tag,
+            linenName: "Sprei",
+            customerName: "RS NCI",
+            room: "Delivery Area",
+            status: "Siap Kirim",
+            deliveryDate: new Date().toISOString().split("T")[0],
+          }));
+          setDeliveryTags(enrichedTags);
+        } catch (err) {
+          console.error("Error fetching delivery tags:", err);
+        }
+      }, 500);
+    } catch (err) {
+      console.error("Error starting delivery:", err);
+    }
+  };
+
+  const stopDelivery = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.stopInventory();
+      setIsDeliveryActive(false);
+      if (deliveryIntervalRef.current) {
+        clearInterval(deliveryIntervalRef.current);
+        deliveryIntervalRef.current = null;
+      }
+    } catch (err) {
+      console.error("Error stopping delivery:", err);
+    }
+  };
+
+  // ==================
+  // Linen Bersih
+  // ==================
+
+  const startLinenBersih = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.startInventory();
+      setIsLinenBersihActive(true);
+
+      linenBersihIntervalRef.current = setInterval(async () => {
+        try {
+          const tagsData = await window.rfidAPI.getTags();
+          const enrichedTags = tagsData.map((tag) => ({
+            ...tag,
+            linenName: "Sarung Bantal",
+            customerName: "RS NCI",
+            room: "Storage Bersih",
+            status: "Bersih",
+            washDate: new Date().toISOString().split("T")[0],
+            qualityCheck: "Passed",
+          }));
+          setLinenBersihTags(enrichedTags);
+        } catch (err) {
+          console.error("Error fetching linen bersih tags:", err);
+        }
+      }, 500);
+    } catch (err) {
+      console.error("Error starting linen bersih:", err);
+    }
+  };
+
+  const stopLinenBersih = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.stopInventory();
+      setIsLinenBersihActive(false);
+      if (linenBersihIntervalRef.current) {
+        clearInterval(linenBersihIntervalRef.current);
+        linenBersihIntervalRef.current = null;
+      }
+    } catch (err) {
+      console.error("Error stopping linen bersih:", err);
+    }
+  };
+
   return {
     // State
     ip,
@@ -323,13 +436,19 @@ export const useRfid = () => {
     registerTags,
     groupingTags,
     sortingTags,
+    deliveryTags,
+    linenBersihTags,
     isGroupingActive,
     isSortingActive,
     isRegisterActive,
+    isDeliveryActive,
+    isLinenBersihActive,
     logRef,
     groupingIntervalRef,
     sortingIntervalRef,
     registerIntervalRef,
+    deliveryIntervalRef,
+    linenBersihIntervalRef,
 
     // Methods
     connect,
@@ -346,6 +465,10 @@ export const useRfid = () => {
     stopGrouping,
     startSorting,
     stopSorting,
+    startDelivery,
+    stopDelivery,
+    startLinenBersih,
+    stopLinenBersih,
     isRfidAvailable,
   };
 };

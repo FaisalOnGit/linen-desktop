@@ -32,7 +32,6 @@ const LoginPage = ({ onLoginSuccess }) => {
         }
       );
 
-      // Check if response is ok before parsing JSON
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
