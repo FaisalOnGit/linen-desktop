@@ -368,7 +368,9 @@ const LinenCleanPage = ({ rfidHook }) => {
   return (
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h1 className="text-2xl font-semibold text-primary">Linen Bersih</h1>
+        <h1 className="text-2xl font-semibold text-primary mb-6">
+          Linen Bersih
+        </h1>
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="relative">
@@ -417,9 +419,6 @@ const LinenCleanPage = ({ rfidHook }) => {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 placeholder="Auto-calculated"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Otomatis terhitung dari jumlah EPC yang valid
-              </p>
             </div>
           </div>
 
@@ -427,7 +426,7 @@ const LinenCleanPage = ({ rfidHook }) => {
           <div>
             <div className="flex justify-between items-center mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Data Linen (EPC & Status) - Auto Add Row
+                Data Linen (EPC & Status)
               </label>
               <div className="flex gap-2">
                 <button

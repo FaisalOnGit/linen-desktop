@@ -4,8 +4,8 @@ const Navbar = ({ activePage, onNavigate }) => {
   const navItems = [
     { id: "reader", label: "Setting Reader" },
     { id: "sorting", label: "Register Linen" },
-    { id: "register", label: "Sorting Linen" },
-    { id: "grouping", label: "Grouping Linen" },
+    { id: "register", label: "Linen Bersih" },
+    // { id: "grouping", label: "Grouping Linen" },
     { id: "delivery", label: "Delivery Linen" },
   ];
 

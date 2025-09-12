@@ -292,7 +292,7 @@ const RegisterPage = ({ rfidHook }) => {
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
         <div className="space-y-6">
-        <h1 className="text-xl font-semibold text-primary">Register Linen</h1>
+          <h1 className="text-xl font-semibold text-primary">Register Linen</h1>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -384,7 +384,7 @@ const RegisterPage = ({ rfidHook }) => {
           <div>
             <div className="flex justify-between items-center mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Data Linen (EPC & Room ID) - Auto Add Row
+                Data Linen (EPC & Room ID)
               </label>
               <div className="flex gap-2">
                 <button
@@ -431,24 +431,6 @@ const RegisterPage = ({ rfidHook }) => {
                   </>
                 )}
               </button>
-
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isRegisterActive
-                      ? "bg-green-500 animate-pulse"
-                      : "bg-gray-400"
-                  }`}
-                ></div>
-                <span className="text-sm text-gray-600">
-                  {isRegisterActive ? "Scanning..." : "Idle"}
-                </span>
-                {registerTags.length > 0 && (
-                  <span className="text-xs text-blue-600">
-                    ({registerTags.length} tags detected)
-                  </span>
-                )}
-              </div>
 
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-100 rounded-lg">
                 <span className="text-sm text-blue-700 font-medium">
