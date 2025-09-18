@@ -140,10 +140,6 @@ const SettingPage = ({ rfidHook }) => {
 
   return (
     <div>
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <h1 className="text-2xl font-semibold text-primary">Setting Reader</h1>
-      </div>
-
       {/* Connection Settings */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">

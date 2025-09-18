@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 export const useRfid = () => {
-  const [ip, setIp] = useState("192.168.100.10");
-  const [port, setPort] = useState(5084);
+  const [ip, setIp] = useState("192.168.100.10"); // default fallback
+  const [port, setPort] = useState(5084); // default fallback
   const [power, setPower] = useState(20);
   const [logs, setLogs] = useState("");
   const [tags, setTags] = useState([]);
@@ -16,6 +16,7 @@ export const useRfid = () => {
   const [isRegisterActive, setIsRegisterActive] = useState(false);
   const [isDeliveryActive, setIsDeliveryActive] = useState(false);
   const [isLinenBersihActive, setIsLinenBersihActive] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   const logRef = useRef(null);
   const groupingIntervalRef = useRef(null);
@@ -23,6 +24,32 @@ export const useRfid = () => {
   const registerIntervalRef = useRef(null);
   const deliveryIntervalRef = useRef(null);
   const linenBersihIntervalRef = useRef(null);
+
+  // Load config on hook initialization
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        if (typeof window !== "undefined" && window.electronAPI) {
+          const config = await window.electronAPI.getConfig();
+          if (config && config.ip && config.port) {
+            setIp(config.ip);
+            setPort(config.port);
+            log(`📋 Config loaded: IP=${config.ip}, Port=${config.port}`);
+          } else {
+            log("⚠️ No valid config found, using defaults");
+          }
+        } else {
+          log("⚠️ Electron API not available, using default config");
+        }
+      } catch (err) {
+        log("❌ Error loading config: " + err.message);
+      } finally {
+        setConfigLoaded(true);
+      }
+    };
+
+    loadConfig();
+  }, []);
 
   const log = useCallback((msg) => {
     setLogs((prev) => prev + msg + "\n");
@@ -35,16 +62,71 @@ export const useRfid = () => {
 
   const isRfidAvailable = typeof window !== "undefined" && window.rfidAPI;
 
+  // Save config when IP or port changes
+  const saveConfig = async (newIp, newPort) => {
+    try {
+      if (typeof window !== "undefined" && window.electronAPI) {
+        const config = { ip: newIp, port: newPort };
+        await window.electronAPI.saveConfig(config);
+        log(`💾 Config saved: IP=${newIp}, Port=${newPort}`);
+      }
+    } catch (err) {
+      log("❌ Error saving config: " + err.message);
+    }
+  };
+
+  // Enhanced setIp that also saves to config
+  const updateIp = async (newIp) => {
+    setIp(newIp);
+    if (configLoaded) {
+      await saveConfig(newIp, port);
+    }
+  };
+
+  // Enhanced setPort that also saves to config
+  const updatePort = async (newPort) => {
+    setPort(newPort);
+    if (configLoaded) {
+      await saveConfig(ip, newPort);
+    }
+  };
+
+  // Reload config manually
+  const reloadConfig = async () => {
+    try {
+      if (typeof window !== "undefined" && window.electronAPI) {
+        const config = await window.electronAPI.getConfig();
+        if (config && config.ip && config.port) {
+          setIp(config.ip);
+          setPort(config.port);
+          log(`🔄 Config reloaded: IP=${config.ip}, Port=${config.port}`);
+          return true;
+        } else {
+          log("⚠️ No valid config found");
+          return false;
+        }
+      }
+      return false;
+    } catch (err) {
+      log("❌ Error reloading config: " + err.message);
+      return false;
+    }
+  };
+
   const connect = async (ipAddress, portNumber) => {
     if (!isRfidAvailable) {
       log("❌ RFID API not available");
       return false;
     }
 
+    // Use provided parameters or current state values
+    const targetIp = ipAddress || ip;
+    const targetPort = portNumber || port;
+
     try {
       const res = await window.rfidAPI.connect({
-        ip: ipAddress,
-        port: portNumber,
+        ip: targetIp,
+        port: targetPort,
       });
       log("✅ Connected: " + JSON.stringify(res));
       return true;
@@ -426,9 +508,9 @@ export const useRfid = () => {
   return {
     // State
     ip,
-    setIp,
+    setIp: updateIp, // Enhanced version that saves to config
     port,
-    setPort,
+    setPort: updatePort, // Enhanced version that saves to config
     power,
     setPower,
     logs,
@@ -443,6 +525,7 @@ export const useRfid = () => {
     isRegisterActive,
     isDeliveryActive,
     isLinenBersihActive,
+    configLoaded, // New state to track if config is loaded
     logRef,
     groupingIntervalRef,
     sortingIntervalRef,
@@ -470,5 +553,7 @@ export const useRfid = () => {
     startLinenBersih,
     stopLinenBersih,
     isRfidAvailable,
+    reloadConfig,
+    saveConfig,
   };
 };

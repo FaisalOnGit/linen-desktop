@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.12",
+    "dotenv": "^17.2.2",
     "edge-js": "^24.0.4",
     "electron-edge-js": "^37.0.0",
     "electron-store": "^9.0.0",

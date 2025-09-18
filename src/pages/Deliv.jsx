@@ -24,18 +24,20 @@ const DeliveryPage = ({ rfidHook }) => {
     { epc: "", status_id: 1, loading: false },
   ]);
   const [processedTags, setProcessedTags] = useState(new Set());
-  const baseUrl = import.meta.env.VITE_BASE_URL;
 
   const fetchCustomers = async (searchTerm = "") => {
     setLoadingCustomers(true);
     try {
       const token = await window.authAPI.getToken();
-      const response = await fetch(`${baseUrl}/Master/customer`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        "https://app.nci.co.id/base_linen/api/Master/customer",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -78,7 +80,9 @@ const DeliveryPage = ({ rfidHook }) => {
     try {
       const token = await window.authAPI.getToken();
       const response = await fetch(
-        `${baseUrl}/Process/linen_rfid?epc=${encodeURIComponent(epc)}`,
+        `https://app.nci.co.id/base_linen/api/Process/linen_rfid?epc=${encodeURIComponent(
+          epc
+        )}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -91,11 +95,6 @@ const DeliveryPage = ({ rfidHook }) => {
         const result = await response.json();
         if (result.success && result.data && result.data.length > 0) {
           const linenData = result.data[0];
-
-          // Check if the linen belongs to the selected customer
-          const isValidCustomer =
-            !formData.customerId ||
-            linenData.customerId === formData.customerId;
 
           // Update the specific linen row with fetched data
           setLinens((prev) =>
@@ -114,10 +113,6 @@ const DeliveryPage = ({ rfidHook }) => {
                     statusId: linenData.statusId,
                     status: linenData.status,
                     loading: false,
-                    isValidCustomer: isValidCustomer,
-                    errorMessage: !isValidCustomer
-                      ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
-                      : null,
                   }
                 : linen
             )
@@ -131,8 +126,6 @@ const DeliveryPage = ({ rfidHook }) => {
                     ...linen,
                     loading: false,
                     status: "Data tidak ditemukan",
-                    isValidCustomer: false,
-                    errorMessage: "Data tidak ditemukan",
                   }
                 : linen
             )
@@ -147,8 +140,6 @@ const DeliveryPage = ({ rfidHook }) => {
                   ...linen,
                   loading: false,
                   status: "Error fetching data",
-                  isValidCustomer: false,
-                  errorMessage: "Error fetching data",
                 }
               : linen
           )
@@ -163,44 +154,11 @@ const DeliveryPage = ({ rfidHook }) => {
                 ...linen,
                 loading: false,
                 status: "Error fetching data",
-                isValidCustomer: false,
-                errorMessage: "Error fetching data",
               }
             : linen
         )
       );
     }
-  };
-
-  // Re-validate all linens when customer changes
-  const revalidateLinens = async (newCustomerId) => {
-    if (!newCustomerId) {
-      // If no customer selected, mark all as valid
-      setLinens((prev) =>
-        prev.map((linen) => ({
-          ...linen,
-          isValidCustomer: true,
-          errorMessage: null,
-        }))
-      );
-      return;
-    }
-
-    const updatedLinens = linens.map((linen) => {
-      if (linen.epc && linen.customerId) {
-        const isValid = linen.customerId === newCustomerId;
-        return {
-          ...linen,
-          isValidCustomer: isValid,
-          errorMessage: !isValid
-            ? `Tag milik ${linen.customerName} (${linen.customerId})`
-            : null,
-        };
-      }
-      return linen;
-    });
-
-    setLinens(updatedLinens);
   };
 
   useEffect(() => {
@@ -265,8 +223,6 @@ const DeliveryPage = ({ rfidHook }) => {
       updatedLinens[index].linenName = "";
       updatedLinens[index].roomName = "";
       updatedLinens[index].loading = false;
-      updatedLinens[index].isValidCustomer = true;
-      updatedLinens[index].errorMessage = null;
 
       if (value.trim()) {
         fetchLinenData(value.trim(), index);
@@ -281,10 +237,7 @@ const DeliveryPage = ({ rfidHook }) => {
   };
 
   const addLinenRow = () => {
-    setLinens([
-      ...linens,
-      { epc: "", status_id: 1, loading: false, isValidCustomer: true },
-    ]);
+    setLinens([...linens, { epc: "", status_id: 1, loading: false }]);
   };
 
   const removeLinenRow = (index) => {
@@ -306,9 +259,7 @@ const DeliveryPage = ({ rfidHook }) => {
 
   // Clear all EPCs and reset processed tags
   const clearAllEPCs = () => {
-    setLinens([
-      { epc: "", status_id: 1, loading: false, isValidCustomer: true },
-    ]);
+    setLinens([{ epc: "", status_id: 1, loading: false }]);
     setProcessedTags(new Set());
   };
 
@@ -330,30 +281,15 @@ const DeliveryPage = ({ rfidHook }) => {
       return;
     }
 
-    // Check for invalid customer tags
-    const invalidTags = linens.filter(
-      (linen) => linen.epc?.trim() && linen.isValidCustomer === false
-    );
-
-    if (invalidTags.length > 0) {
-      const invalidEPCs = invalidTags.map((tag) => tag.epc).join(", ");
-      alert(
-        `Tidak dapat memproses! Ada ${invalidTags.length} tag yang tidak sesuai dengan customer: ${invalidEPCs}`
-      );
-      return;
-    }
-
     try {
       // Ambil token
       const token = await window.authAPI.getToken();
 
-      // Filter linen yang valid (harus ada EPC dan customer valid)
-      const validLinens = linens.filter(
-        (linen) => linen.epc?.trim() && linen.isValidCustomer !== false
-      );
+      // Filter linen yang valid (harus ada EPC)
+      const validLinens = linens.filter((linen) => linen.epc?.trim());
 
       if (validLinens.length === 0) {
-        alert("Minimal harus ada 1 EPC linen yang valid!");
+        alert("Minimal harus ada 1 EPC linen!");
         return;
       }
 
@@ -372,14 +308,17 @@ const DeliveryPage = ({ rfidHook }) => {
       console.log("Payload dikirim:", payload);
 
       // Kirim request POST
-      const response = await fetch(`${baseUrl}/Process/delivery`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        "https://app.nci.co.id/base_linen/api/Process/delivery",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.text();
@@ -397,9 +336,7 @@ const DeliveryPage = ({ rfidHook }) => {
         driverName: "",
         plateNumber: "",
       });
-      setLinens([
-        { epc: "", status_id: 1, loading: false, isValidCustomer: true },
-      ]);
+      setLinens([{ epc: "", status_id: 1, loading: false }]);
       setProcessedTags(new Set());
 
       // Stop scanning if active
@@ -446,19 +383,14 @@ const DeliveryPage = ({ rfidHook }) => {
     }
   };
 
-  const getRowColor = (linen) => {
-    if (linen.isValidCustomer === false) {
-      return "bg-red-50 border-red-200";
-    }
-    if (linen.epc) {
-      return "bg-green-50";
-    }
-    return "hover:bg-gray-50";
-  };
-
   return (
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Truck className="text-primary" size={28} />
+          <h1 className="text-2xl font-semibold text-primary">Delivery</h1>
+        </div>
+
         <div className="space-y-6">
           {/* Customer and Delivery Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -473,15 +405,11 @@ const DeliveryPage = ({ rfidHook }) => {
                   const selected = customers.find(
                     (c) => c.customerId === e.target.value
                   );
-                  const newFormData = {
+                  setFormData({
                     ...formData,
                     customerId: selected?.customerId || "",
                     customerName: selected?.customerName || "",
-                  };
-                  setFormData(newFormData);
-
-                  // Re-validate all existing linens
-                  revalidateLinens(selected?.customerId || "");
+                  });
                 }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
               >
@@ -624,37 +552,10 @@ const DeliveryPage = ({ rfidHook }) => {
 
               <div className="flex items-center gap-2 px-3 py-2 bg-green-100 rounded-lg">
                 <span className="text-sm text-green-700 font-medium">
-                  Valid EPCs:{" "}
-                  {
-                    linens.filter(
-                      (l) => l.epc.trim() && l.isValidCustomer !== false
-                    ).length
-                  }
+                  Valid EPCs: {linens.filter((l) => l.epc.trim()).length}
                 </span>
               </div>
-
-              {linens.filter((l) => l.isValidCustomer === false).length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-red-100 rounded-lg">
-                  <span className="text-sm text-red-700 font-medium">
-                    Invalid EPCs:{" "}
-                    {linens.filter((l) => l.isValidCustomer === false).length}
-                  </span>
-                </div>
-              )}
             </div>
-
-            {/* Warning message for invalid customers */}
-            {formData.customerId &&
-              linens.filter((l) => l.isValidCustomer === false).length > 0 && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700">
-                    ⚠️ Terdapat{" "}
-                    {linens.filter((l) => l.isValidCustomer === false).length}{" "}
-                    tag yang tidak sesuai dengan customer yang dipilih. Tag
-                    tersebut tidak akan diproses saat submit.
-                  </p>
-                </div>
-              )}
 
             {/* Table */}
             <div className="overflow-x-auto">
@@ -670,9 +571,6 @@ const DeliveryPage = ({ rfidHook }) => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Customer Info
-                    </th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 border-b">
                       Aksi
                     </th>
@@ -682,20 +580,15 @@ const DeliveryPage = ({ rfidHook }) => {
                   {linens.map((linen, index) => (
                     <tr
                       key={index}
-                      className={`${getRowColor(
-                        linen
-                      )} transition-colors duration-200`}
+                      className={`${
+                        linen.epc ? "bg-green-50" : "hover:bg-gray-50"
+                      }`}
                     >
                       <td className="px-4 py-3 text-sm text-gray-700 border-b">
                         {index + 1}
                         {linen.epc && (
                           <span className="ml-2 text-xs text-green-600">
                             ✓ Scanned
-                          </span>
-                        )}
-                        {linen.isValidCustomer === false && (
-                          <span className="ml-2 text-xs text-red-600">
-                            ✗ Invalid
                           </span>
                         )}
                       </td>
@@ -707,12 +600,8 @@ const DeliveryPage = ({ rfidHook }) => {
                             handleLinenChange(index, "epc", e.target.value)
                           }
                           placeholder="Auto-filled dari scan / manual input"
-                          className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent ${
-                            linen.isValidCustomer === false
-                              ? "border-red-300 bg-red-50"
-                              : linen.epc
-                              ? "bg-green-50 border-green-300"
-                              : "border-gray-300"
+                          className={`w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent ${
+                            linen.epc ? "bg-green-50 border-green-300" : ""
                           }`}
                           readOnly={linen.epc && processedTags.has(linen.epc)}
                         />
@@ -733,20 +622,6 @@ const DeliveryPage = ({ rfidHook }) => {
                           >
                             {linen.status || "Unknown"}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
-                        {linen.isValidCustomer === false &&
-                        linen.errorMessage ? (
-                          <div className="text-xs text-red-600">
-                            {linen.errorMessage}
-                          </div>
-                        ) : linen.customerName ? (
-                          <div className="text-xs text-green-600">
-                            {linen.customerName}
-                          </div>
-                        ) : (
-                          <div className="text-xs text-gray-400">-</div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center border-b">
@@ -775,29 +650,20 @@ const DeliveryPage = ({ rfidHook }) => {
                 !formData.customerId ||
                 !formData.driverName.trim() ||
                 !formData.plateNumber.trim() ||
-                linens.filter(
-                  (l) => l.epc.trim() && l.isValidCustomer !== false
-                ).length === 0
+                linens.filter((l) => l.epc.trim()).length === 0
               }
               className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                 !formData.customerId ||
                 !formData.driverName.trim() ||
                 !formData.plateNumber.trim() ||
-                linens.filter(
-                  (l) => l.epc.trim() && l.isValidCustomer !== false
-                ).length === 0
+                linens.filter((l) => l.epc.trim()).length === 0
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-primary hover:bg-blue-400 text-white"
               }`}
             >
               <Truck size={16} />
-              Proses Delivery (
-              {
-                linens.filter(
-                  (l) => l.epc.trim() && l.isValidCustomer !== false
-                ).length
-              }{" "}
-              valid items)
+              Proses Delivery ({linens.filter((l) => l.epc.trim()).length}{" "}
+              items)
             </button>
           </div>
         </div>

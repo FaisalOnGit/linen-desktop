@@ -1,43 +1,258 @@
-import logo from "../../public/osla.png";
+import { useState } from "react";
+import {
+  FileText,
+  CheckCircle,
+  Truck,
+  Settings,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+import Osla from "../../public/osla.png";
 
-const Navbar = ({ activePage, onNavigate }) => {
-  const navItems = [
-    { id: "reader", label: "Setting Reader" },
-    { id: "sorting", label: "Register Linen" },
-    { id: "register", label: "Linen Bersih" },
-    // { id: "grouping", label: "Grouping Linen" },
-    { id: "delivery", label: "Delivery Linen" },
+const Navbar = ({ activePage, onNavigate, rfidHook }) => {
+  const [activeTab, setActiveTab] = useState("Process");
+
+  // Destructure RFID hook functions and state
+  const {
+    ip,
+    port,
+    connect,
+    disconnect,
+    // You might want to add a connection status from your rfidHook
+    // For now, I'll create a local state to track connection
+  } = rfidHook || {};
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleConnect = async () => {
+    if (isConnected) {
+      setIsConnecting(true);
+      await disconnect();
+      setIsConnected(false);
+      setIsConnecting(false);
+    } else {
+      setIsConnecting(true);
+      const success = await connect(ip, port);
+      if (success !== false) {
+        setIsConnected(true);
+      }
+      setIsConnecting(false);
+    }
+  };
+
+  const ribbonTabs = [
+    {
+      name: "Process",
+      groups: [
+        {
+          title: "Register",
+          commands: [
+            {
+              id: "register",
+              label: "Register\nLinen",
+              icon: FileText,
+              size: "large",
+              description: "Register new linen items",
+            },
+          ],
+        },
+        {
+          title: "Clean Process",
+          commands: [
+            {
+              id: "sorting",
+              label: "Linen\nBersih",
+              icon: CheckCircle,
+              size: "large",
+              description: "Process clean linen",
+            },
+          ],
+        },
+        {
+          title: "Distribution",
+          commands: [
+            {
+              id: "delivery",
+              label: "Delivery\nLinen",
+              icon: Truck,
+              size: "large",
+              description: "Deliver linen to locations",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "Settings",
+      groups: [
+        {
+          title: "Device",
+          commands: [
+            {
+              id: "reader",
+              label: "Setting\nReader",
+              icon: Settings,
+              size: "large",
+              description: "Configure RFID reader",
+            },
+          ],
+        },
+      ],
+    },
   ];
 
+  const currentTab = ribbonTabs.find((tab) => tab.name === activeTab);
+
   return (
-    <nav className="bg-primary text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <img
-              src={logo}
-              alt="OSLA Logo"
-              className="h-14 w-auto object-contain"
-            />
-          </div>
-          <div className="flex space-x-1">
-            {navItems.map((item) => (
+    <div className="bg-white border-b border-gray-200">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 bg-primary border-b border-gray-200">
+        {/* Ribbon Tabs di kiri */}
+        <div className="flex items-center space-x-2 py-2">
+          {ribbonTabs.map((tab) => (
+            <button
+              key={tab.name}
+              onClick={() => setActiveTab(tab.name)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.name
+                  ? "text-white border-white"
+                  : "text-gray-200 border-transparent hover:text-white hover:border-white/50"
+              }`}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Connection Status & Logo di kanan */}
+        <div className="flex items-center space-x-4 py-2">
+          {/* Connection Status & Button */}
+          {rfidHook && (
+            <div className="flex items-center space-x-3">
+              {/* Connection Status Indicator */}
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isConnected ? "bg-green-400" : "bg-red-400"
+                  }`}
+                />
+                <span className="text-white text-sm">
+                  {ip}:{port}
+                </span>
+                <span
+                  className={`text-xs px-2 py-1 rounded ${
+                    isConnected
+                      ? "bg-green-600 text-white"
+                      : "bg-red-600 text-white"
+                  }`}
+                >
+                  {isConnected ? "Connected" : "Disconnected"}
+                </span>
+              </div>
+
+              {/* Connect/Disconnect Button */}
               <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  activePage === item.id
-                    ? "bg-secondary text-primary font-medium"
-                    : "text-white hover:bg-blue-400 hover:text-white"
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  isConnected
+                    ? "bg-red-600 hover:bg-red-700 text-white"
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                } ${
+                  isConnecting
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer"
                 }`}
+                title={
+                  isConnected
+                    ? "Disconnect from RFID reader"
+                    : "Connect to RFID reader"
+                }
               >
-                {item.label}
+                {isConnecting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : isConnected ? (
+                  <WifiOff className="w-4 h-4" />
+                ) : (
+                  <Wifi className="w-4 h-4" />
+                )}
+                <span>
+                  {isConnecting
+                    ? "..."
+                    : isConnected
+                    ? "Disconnect"
+                    : "Connect"}
+                </span>
               </button>
-            ))}
+            </div>
+          )}
+
+          {/* Logo OSLA */}
+          <div className="flex items-center space-x-3">
+            <img
+              src={Osla}
+              alt="OSLA Logo"
+              className="h-10 w-auto object-contain"
+            />
           </div>
         </div>
       </div>
-    </nav>
+
+      {/* Ribbon Content */}
+      <div className="bg-gray-50 px-4 py-3 min-h-[100px]">
+        <div className="flex space-x-6">
+          {currentTab?.groups.map((group) => (
+            <div key={group.title} className="flex flex-col relative">
+              <div className="flex items-start space-x-2 mb-2">
+                {group.commands.map((command) => {
+                  const IconComponent = command.icon;
+                  const isActive = activePage === command.id;
+
+                  if (command.size === "large") {
+                    return (
+                      <button
+                        key={command.id}
+                        onClick={() => onNavigate(command.id)}
+                        className={`flex flex-col items-center p-2 rounded-md transition-colors min-w-[60px] group ${
+                          isActive
+                            ? "bg-blue-100 text-blue-600 shadow-sm"
+                            : "hover:bg-gray-100 text-gray-700"
+                        }`}
+                        title={command.description}
+                      >
+                        <IconComponent className="w-8 h-8 mb-1" />
+                        <span className="text-xs text-center leading-tight whitespace-pre-line">
+                          {command.label}
+                        </span>
+                      </button>
+                    );
+                  } else {
+                    return (
+                      <button
+                        key={command.id}
+                        onClick={() => onNavigate(command.id)}
+                        className={`flex items-center space-x-2 px-2 py-1 rounded transition-colors ${
+                          isActive
+                            ? "bg-blue-100 text-blue-600"
+                            : "hover:bg-gray-100 text-gray-700"
+                        }`}
+                        title={command.description}
+                      >
+                        <IconComponent className="w-4 h-4" />
+                        <span className="text-xs whitespace-nowrap">
+                          {command.label}
+                        </span>
+                      </button>
+                    );
+                  }
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 };
 

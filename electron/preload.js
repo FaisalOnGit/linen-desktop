@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   selectFolder: () => ipcRenderer.invoke("select-folder"),
   onScanProgress: (callback) => ipcRenderer.on("scan-progress", callback),
   openFolder: (filePath) => ipcRenderer.send("open-folder", filePath),
+  getConfig: () => ipcRenderer.invoke("get-config"),
+  saveConfig: (config) => ipcRenderer.invoke("save-config", config),
 });
 
 // Add RFID API

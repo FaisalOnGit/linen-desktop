@@ -29,12 +29,12 @@ const App = () => {
   const renderActivePage = () => {
     switch (activePage) {
       case "login":
-        return <LoginPage onLoginSuccess={() => setActivePage("reader")} />;
+        return <LoginPage onLoginSuccess={() => setActivePage("register")} />;
       case "reader":
         return <SettingPage rfidHook={rfidHook} />;
-      case "sorting":
-        return <RegisterPage rfidHook={rfidHook} />;
       case "register":
+        return <RegisterPage rfidHook={rfidHook} />;
+      case "sorting":
         return <LinenCleanPage rfidHook={rfidHook} />;
       case "grouping":
         return <GroupingPage rfidHook={rfidHook} />;
@@ -48,7 +48,11 @@ const App = () => {
   return (
     <div className="font-poppins bg-gray-100 min-h-screen">
       {activePage !== "login" && (
-        <Navbar activePage={activePage} onNavigate={handleNavigation} />
+        <Navbar
+          activePage={activePage}
+          onNavigate={handleNavigation}
+          rfidHook={rfidHook}
+        />
       )}
 
       {activePage === "login" ? (

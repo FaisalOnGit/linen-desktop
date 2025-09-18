@@ -9,6 +9,7 @@ const {
 const path = require("path");
 const fs = require("fs");
 const { Worker } = require("worker_threads");
+const { loadConfig, saveConfig } = require("./config");
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
@@ -167,7 +168,7 @@ function createWindow() {
     icon: path.join(__dirname, "assets", "icon.png"),
     width: 1200,
     height: 800,
-    autoHideMenuBar: false,
+    autoHideMenuBar: true,
     webPreferences: {
       sandbox: false,
       preload: path.join(__dirname, "preload.js"),
@@ -224,6 +225,17 @@ function createWindow() {
 
   return win;
 }
+
+// IPC untuk ambil config
+ipcMain.handle("get-config", () => {
+  return loadConfig();
+});
+
+// IPC untuk simpan config
+ipcMain.handle("save-config", (event, config) => {
+  saveConfig(config);
+  return true;
+});
 
 // RFID IPC Handlers
 ipcMain.handle("rfid-connect", async (event, config) => {

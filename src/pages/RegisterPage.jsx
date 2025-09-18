@@ -24,28 +24,29 @@ const RegisterPage = ({ rfidHook }) => {
   });
 
   const [customers, setCustomers] = useState([]);
+  const [rooms, setRooms] = useState([]); // State untuk menyimpan data room
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [loadingRooms, setLoadingRooms] = useState(false); // State untuk loading rooms
   const [linenOptions, setLinenOptions] = useState([]);
   const [loadingLinens, setLoadingLinens] = useState(false);
 
   const [linens, setLinens] = useState([{ epc: "", roomId: "" }]);
-  const [processedTags, setProcessedTags] = useState(new Set()); // Track processed EPCs
+  const [processedTags, setProcessedTags] = useState(new Set());
+  const baseUrl = import.meta.env.VITE_BASE_URL;
 
+  // Fungsi untuk fetch customers
   const fetchCustomers = async (searchTerm = "") => {
     setLoadingCustomers(true);
     try {
       const token = await window.authAPI.getToken();
-      const response = await fetch(
-        "https://app.nci.co.id/base_linen/api/Master/customer",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${baseUrl}/Master/customer`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (response.ok) {
         const result = await response.json();
@@ -76,12 +77,18 @@ const RegisterPage = ({ rfidHook }) => {
     }
   };
 
-  const fetchLinens = async (searchTerm = "") => {
-    setLoadingLinens(true);
+  // Fungsi untuk fetch rooms berdasarkan customerId
+  const fetchRooms = async (customerId) => {
+    if (!customerId) {
+      setRooms([]);
+      return;
+    }
+
+    setLoadingRooms(true);
     try {
       const token = await window.authAPI.getToken();
       const response = await fetch(
-        "https://app.nci.co.id/base_linen/api/Master/linen",
+        `${baseUrl}/Master/room?customerId=${customerId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -89,6 +96,32 @@ const RegisterPage = ({ rfidHook }) => {
           },
         }
       );
+
+      if (response.ok) {
+        const result = await response.json();
+        setRooms(result.data || []);
+      } else {
+        console.error("Failed to fetch rooms");
+        setRooms([]);
+      }
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+      setRooms([]);
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  const fetchLinens = async (searchTerm = "") => {
+    setLoadingLinens(true);
+    try {
+      const token = await window.authAPI.getToken();
+      const response = await fetch(`${baseUrl}/Master/linen`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (response.ok) {
         const result = await response.json();
@@ -121,6 +154,15 @@ const RegisterPage = ({ rfidHook }) => {
     fetchCustomers();
     fetchLinens();
   }, []);
+
+  // Effect untuk fetch rooms ketika customerId berubah
+  useEffect(() => {
+    if (formData.customerId) {
+      fetchRooms(formData.customerId);
+    } else {
+      setRooms([]);
+    }
+  }, [formData.customerId]);
 
   useEffect(() => {
     if (registerTags && registerTags.length > 0) {
@@ -248,17 +290,14 @@ const RegisterPage = ({ rfidHook }) => {
       console.log("Payload dikirim:", payload);
 
       // Kirim request POST
-      const response = await fetch(
-        "https://app.nci.co.id/base_linen/api/Process/register_rfid",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch(`${baseUrl}/Process/register_rfid`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -292,7 +331,6 @@ const RegisterPage = ({ rfidHook }) => {
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
         <div className="space-y-6">
-          <h1 className="text-xl font-semibold text-primary">Register Linen</h1>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -495,15 +533,20 @@ const RegisterPage = ({ rfidHook }) => {
                         />
                       </td>
                       <td className="px-4 py-3 border-b">
-                        <input
-                          type="text"
+                        <select
                           value={linen.roomId}
                           onChange={(e) =>
                             handleLinenChange(index, "roomId", e.target.value)
                           }
-                          placeholder="Masukkan Room ID"
                           className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent"
-                        />
+                        >
+                          <option value="">-- Pilih Room --</option>
+                          {rooms.map((room) => (
+                            <option key={room.roomId} value={room.roomId}>
+                              {room.roomName} ({room.roomId})
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3 text-center border-b">
                         {linens.length > 1 && (

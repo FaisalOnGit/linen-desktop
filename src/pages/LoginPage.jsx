@@ -18,19 +18,18 @@ const LoginPage = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      const response = await fetch(
-        "https://app.nci.co.id/base_linen/api/Auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password,
-          }),
-        }
-      );
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+
+      const response = await fetch(`${baseUrl}/Auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
