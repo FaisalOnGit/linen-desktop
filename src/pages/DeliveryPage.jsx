@@ -533,7 +533,7 @@ const DeliveryPage = ({ rfidHook }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nomor Plat <span className="text-red-500">*</span>
+                Nomor Polisi <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
