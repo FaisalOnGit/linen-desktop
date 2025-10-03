@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import SortingTable from "../components/SortingTable";
 import { Play, Square } from "lucide-react";
+import { useTableMode } from "../contexts/TableModeContext";
 
 const SortingLinenPage = ({ rfidHook }) => {
   const { sortingTags, startSorting, stopSorting } = rfidHook;
   const [isRunning, setIsRunning] = useState(false);
-  const [tableMode, setTableMode] = useState("double"); // "single" atau "double"
+  const { tableMode, handleTableModeChange } = useTableMode();
 
   // Pisahkan data berdasarkan antenna
   const antenna1Tags = sortingTags?.filter((tag) => tag.antenna === 1) || [];
@@ -23,43 +24,10 @@ const SortingLinenPage = ({ rfidHook }) => {
     setIsRunning(!isRunning);
   };
 
-  const handleTableModeChange = (mode) => {
-    setTableMode(mode);
-  };
-
   return (
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         <h1 className="text-2xl font-semibold text-primary">Sorting Linen</h1>
-      </div>
-
-      {/* Toggle Single/Double Table */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <div className="flex items-center gap-4">
-          <span className="text-gray-700 font-medium">Mode Tabel:</span>
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => handleTableModeChange("single")}
-              className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                tableMode === "single"
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-            >
-              Single
-            </button>
-            <button
-              onClick={() => handleTableModeChange("double")}
-              className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                tableMode === "double"
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-            >
-              Double
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Info Section with button top-right */}

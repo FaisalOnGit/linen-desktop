@@ -20,7 +20,6 @@ const RegisterPage = ({ rfidHook }) => {
     customerName: "",
     linenId: "",
     rfidRegisterDescription: "",
-    locationId: "",
   });
 
   const [customers, setCustomers] = useState([]);
@@ -32,8 +31,9 @@ const RegisterPage = ({ rfidHook }) => {
   const [linenOptions, setLinenOptions] = useState([]);
   const [loadingLinens, setLoadingLinens] = useState(false);
 
-  const [linens, setLinens] = useState([{ epc: "", roomId: "" }]);
+  const [linens, setLinens] = useState([{ linenId: "", epc: "", roomId: "" }]);
   const [processedTags, setProcessedTags] = useState(new Set());
+  const [validEpcs, setValidEpcs] = useState(new Set());
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
   // Fungsi untuk fetch customers
@@ -177,6 +177,9 @@ const RegisterPage = ({ rfidHook }) => {
         );
 
         if (existingIndex === -1) {
+          // Add to valid EPCs set (RegisterPage menerima semua EPC)
+          setValidEpcs((prev) => new Set([...prev, latestTag.EPC]));
+
           // EPC doesn't exist, find first empty row or add new row
           const emptyRowIndex = linens.findIndex(
             (linen) => linen.epc.trim() === ""
@@ -187,7 +190,10 @@ const RegisterPage = ({ rfidHook }) => {
             handleLinenChange(emptyRowIndex, "epc", latestTag.EPC);
           } else {
             // No empty row found, add new row with EPC
-            setLinens((prev) => [...prev, { epc: latestTag.EPC, roomId: "" }]);
+            setLinens((prev) => [
+              ...prev,
+              { linenId: "", epc: latestTag.EPC, roomId: "" },
+            ]);
           }
         } else {
           // EPC already exists, just update it (in case of re-scan)
@@ -197,7 +203,7 @@ const RegisterPage = ({ rfidHook }) => {
         }
       }
     }
-  }, [registerTags, processedTags, linens]);
+  }, [registerTags]); // Simplified dependencies
 
   useEffect(() => {
     if (!isRegisterActive) {
@@ -242,7 +248,7 @@ const RegisterPage = ({ rfidHook }) => {
   };
 
   const addLinenRow = () => {
-    setLinens([...linens, { epc: "", roomId: "" }]);
+    setLinens([...linens, { linenId: "", epc: "", roomId: "" }]);
   };
 
   const removeLinenRow = (index) => {
@@ -262,8 +268,9 @@ const RegisterPage = ({ rfidHook }) => {
   };
 
   const clearAllEPCs = () => {
-    setLinens([{ epc: "", roomId: "" }]);
+    setLinens([{ linenId: "", epc: "", roomId: "" }]);
     setProcessedTags(new Set());
+    setValidEpcs(new Set());
   };
 
   const handleSubmit = async (e) => {
@@ -275,15 +282,15 @@ const RegisterPage = ({ rfidHook }) => {
 
       // Filter linen yang valid
       const validLinens = linens.filter(
-        (linen) => linen.epc?.trim() || linen.roomId?.trim()
+        (linen) =>
+          linen.linenId?.trim() || linen.epc?.trim() || linen.roomId?.trim()
       );
 
       // Buat payload
       const payload = {
         customerId: formData.customerId,
-        linenId: formData.linenId,
         rfidRegisterDescription: formData.rfidRegisterDescription,
-        locationId: formData.locationId,
+        locationId: "LOC001",
         linens: validLinens,
       };
 
@@ -306,7 +313,22 @@ const RegisterPage = ({ rfidHook }) => {
       const result = await response.json();
       console.log("Response dari API:", result);
 
-      // Bisa kasih feedback ke user
+      // Reset form after success
+      setFormData({
+        customerId: "",
+        customerName: "",
+        linenId: "",
+        rfidRegisterDescription: "",
+      });
+      setLinens([{ linenId: "", epc: "", roomId: "" }]);
+      setProcessedTags(new Set());
+      setValidEpcs(new Set());
+
+      // Stop scanning if active
+      if (isRegisterActive) {
+        stopRegister();
+      }
+
       alert("Registrasi RFID berhasil!");
     } catch (error) {
       console.error("Error submit:", error);
@@ -366,29 +388,6 @@ const RegisterPage = ({ rfidHook }) => {
               )}
             </div>
 
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pilih Linen
-              </label>
-              <select
-                name="linenId"
-                value={formData.linenId}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              >
-                <option value="">-- Pilih Linen --</option>
-                {linenOptions.map((linen) => (
-                  <option key={linen.linenId} value={linen.linenId}>
-                    {linen.linenName} ({linen.linenTypeName})
-                  </option>
-                ))}
-              </select>
-
-              {loadingLinens && (
-                <p className="text-xs text-gray-500 mt-1">Loading linen...</p>
-              )}
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 RFID Register Description
@@ -400,21 +399,6 @@ const RegisterPage = ({ rfidHook }) => {
                 placeholder="Deskripsi registrasi RFID"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent h-[100px]"
               ></textarea>
-            </div>
-
-            {/* Location ID */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location ID
-              </label>
-              <input
-                type="text"
-                name="locationId"
-                value={formData.locationId}
-                onChange={handleChange}
-                placeholder="Masukkan Location ID"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              />
             </div>
           </div>
 
@@ -492,6 +476,9 @@ const RegisterPage = ({ rfidHook }) => {
                       No
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                      Linen
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       EPC
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
@@ -517,6 +504,22 @@ const RegisterPage = ({ rfidHook }) => {
                             ✓ Scanned
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 border-b">
+                        <select
+                          value={linen.linenId}
+                          onChange={(e) =>
+                            handleLinenChange(index, "linenId", e.target.value)
+                          }
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent"
+                        >
+                          <option value="">-- Pilih Linen --</option>
+                          {linenOptions.map((linen) => (
+                            <option key={linen.linenId} value={linen.linenId}>
+                              {linen.linenName} ({linen.linenTypeName})
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3 border-b">
                         <input
@@ -573,7 +576,11 @@ const RegisterPage = ({ rfidHook }) => {
               className="w-full bg-primary hover:bg-blue-400 text-white px-4 py-3 rounded-lg font-medium"
             >
               Register Linen (
-              {linens.filter((l) => l.epc.trim() || l.roomId.trim()).length}{" "}
+              {
+                linens.filter(
+                  (l) => l.linenId.trim() || l.epc.trim() || l.roomId.trim()
+                ).length
+              }{" "}
               items)
             </button>
           </div>

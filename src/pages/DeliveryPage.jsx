@@ -66,6 +66,122 @@ const DeliveryPage = ({ rfidHook }) => {
     }
   };
 
+  const fetchLinenDataAndCheck = async (epc, index) => {
+    if (!epc.trim()) return;
+
+    try {
+      const token = await window.authAPI.getToken();
+      const response = await fetch(
+        `${baseUrl}/Process/linen_rfid?epc=${encodeURIComponent(epc)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data && result.data.length > 0) {
+          const linenData = result.data[0];
+
+          // Check if the linen belongs to the selected customer
+          const isValidCustomer =
+            !formData.customerId ||
+            linenData.customerId === formData.customerId;
+
+          // EPC found in API - keep the row with fetched data
+          setLinens((prev) =>
+            prev.map((linen, i) =>
+              i === index
+                ? {
+                    ...linen,
+                    epc: linenData.epc,
+                    customerId: linenData.customerId,
+                    customerName: linenData.customerName,
+                    linenId: linenData.linenId,
+                    linenTypeName: linenData.linenTypeName,
+                    linenName: linenData.linenName,
+                    roomId: linenData.roomId,
+                    roomName: linenData.roomName,
+                    statusId: linenData.statusId,
+                    status: linenData.status,
+                    loading: false,
+                    isValidCustomer: isValidCustomer,
+                    errorMessage: !isValidCustomer
+                      ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                      : null,
+                  }
+                : linen
+            )
+          );
+        } else {
+          // EPC not found in API - remove the row
+          console.log(`EPC ${epc} tidak ditemukan di API, menghapus baris`);
+          setLinens((prev) => {
+            const filtered = prev.filter((_, i) => i !== index);
+            // Ensure at least one empty row remains
+            return filtered.length > 0
+              ? filtered
+              : [
+                  {
+                    epc: "",
+                    status_id: 1,
+                    loading: false,
+                    isValidCustomer: true,
+                  },
+                ];
+          });
+
+          // Remove from processed tags so it can be scanned again if needed
+          setProcessedTags((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(epc);
+            return newSet;
+          });
+        }
+      } else {
+        console.error("Failed to fetch linen data for EPC:", epc);
+        // Remove the row on API error as well
+        setLinens((prev) => {
+          const filtered = prev.filter((_, i) => i !== index);
+          return filtered.length > 0
+            ? filtered
+            : [
+                {
+                  epc: "",
+                  status_id: 1,
+                  loading: false,
+                  isValidCustomer: true,
+                },
+              ];
+        });
+
+        setProcessedTags((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(epc);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching linen data:", error);
+      // Remove the row on error as well
+      setLinens((prev) => {
+        const filtered = prev.filter((_, i) => i !== index);
+        return filtered.length > 0
+          ? filtered
+          : [{ epc: "", status_id: 1, loading: false, isValidCustomer: true }];
+      });
+
+      setProcessedTags((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(epc);
+        return newSet;
+      });
+    }
+  };
+
   const fetchLinenData = async (epc, index) => {
     if (!epc.trim()) return;
 
@@ -123,20 +239,20 @@ const DeliveryPage = ({ rfidHook }) => {
             )
           );
         } else {
-          // No data found for this EPC
-          setLinens((prev) =>
-            prev.map((linen, i) =>
-              i === index
-                ? {
-                    ...linen,
+          // No data found for this EPC - remove the row
+          setLinens((prev) => {
+            const filtered = prev.filter((_, i) => i !== index);
+            return filtered.length > 0
+              ? filtered
+              : [
+                  {
+                    epc: "",
+                    status_id: 1,
                     loading: false,
-                    status: "Data tidak ditemukan",
-                    isValidCustomer: false,
-                    errorMessage: "Data tidak ditemukan",
-                  }
-                : linen
-            )
-          );
+                    isValidCustomer: true,
+                  },
+                ];
+          });
         }
       } else {
         console.error("Failed to fetch linen data for EPC:", epc);
@@ -223,15 +339,27 @@ const DeliveryPage = ({ rfidHook }) => {
           );
 
           if (emptyRowIndex !== -1) {
-            handleLinenChange(emptyRowIndex, "epc", latestTag.EPC);
-            fetchLinenData(latestTag.EPC, emptyRowIndex);
+            // First add EPC to the row, then fetch data to validate
+            const updatedLinens = [...linens];
+            updatedLinens[emptyRowIndex].epc = latestTag.EPC;
+            updatedLinens[emptyRowIndex].loading = true;
+            setLinens(updatedLinens);
+
+            // Check if EPC exists in API before finalizing the row
+            fetchLinenDataAndCheck(latestTag.EPC, emptyRowIndex);
           } else {
+            // Create new row and check API first
             const newIndex = linens.length;
             setLinens((prev) => [
               ...prev,
-              { epc: latestTag.EPC, status_id: 1, loading: false },
+              { epc: latestTag.EPC, status_id: 1, loading: true },
             ]);
-            setTimeout(() => fetchLinenData(latestTag.EPC, newIndex), 100);
+
+            // Check API before keeping the row
+            setTimeout(
+              () => fetchLinenDataAndCheck(latestTag.EPC, newIndex),
+              100
+            );
           }
         } else {
           console.log(
@@ -555,16 +683,9 @@ const DeliveryPage = ({ rfidHook }) => {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={addLinenRow}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
-                >
-                  <Plus size={14} />
-                  <span>Tambah Baris</span>
-                </button>
-                <button
-                  type="button"
                   onClick={clearAllEPCs}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
+                  title="Hapus semua EPC untuk scan ulang"
                 >
                   <Trash2 size={14} />
                   <span>Clear All</span>
@@ -673,9 +794,6 @@ const DeliveryPage = ({ rfidHook }) => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Customer Info
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 border-b">
-                      Aksi
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -747,18 +865,6 @@ const DeliveryPage = ({ rfidHook }) => {
                           </div>
                         ) : (
                           <div className="text-xs text-gray-400">-</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center border-b">
-                        {linens.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeLinenRow(index)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Hapus baris"
-                          >
-                            <Trash2 size={16} />
-                          </button>
                         )}
                       </td>
                     </tr>

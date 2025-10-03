@@ -55,3 +55,63 @@ contextBridge.exposeInMainWorld("authAPI", {
     return Promise.resolve(!!globalToken);
   },
 });
+
+// Add Printer API
+contextBridge.exposeInMainWorld("printerAPI", {
+  // Print label with ZPL data
+  printLabel: (printData) => ipcRenderer.invoke("print-label", printData),
+
+  // Get available printers
+  getPrinters: () => ipcRenderer.invoke("get-printers"),
+
+  // Test printer connection
+  testConnection: (printerConfig) => ipcRenderer.invoke("test-printer-connection", printerConfig),
+});
+
+// Add Zebra BrowserPrint API
+contextBridge.exposeInMainWorld("zebraAPI", {
+  // Get default device
+  getDefaultDevice: (type) => {
+    return new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.BrowserPrint) {
+        window.BrowserPrint.getDefaultDevice(
+          type,
+          (device) => resolve(device),
+          (error) => reject(error)
+        );
+      } else {
+        reject(new Error('BrowserPrint not available'));
+      }
+    });
+  },
+
+  // Get local devices
+  getLocalDevices: (type) => {
+    return new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.BrowserPrint) {
+        window.BrowserPrint.getLocalDevices(
+          (devices) => resolve(devices),
+          (error) => reject(error),
+          type
+        );
+      } else {
+        reject(new Error('BrowserPrint not available'));
+      }
+    });
+  },
+
+  // Send ZPL to device
+  sendToDevice: (device, zpl) => {
+    return new Promise((resolve, reject) => {
+      if (device && device.send) {
+        device.send(
+          zpl,
+          () => resolve(),
+          (error) => reject(error)
+        );
+      } else {
+        reject(new Error('Invalid device or send method not available'));
+      }
+    });
+  }
+});

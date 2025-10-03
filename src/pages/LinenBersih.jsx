@@ -22,6 +22,7 @@ const LinenCleanPage = ({ rfidHook }) => {
     { epc: "", status_id: 1, loading: false },
   ]);
   const [processedTags, setProcessedTags] = useState(new Set());
+  const [validEpcs, setValidEpcs] = useState(new Set());
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
   const fetchCustomers = async (searchTerm = "") => {
@@ -89,6 +90,125 @@ const LinenCleanPage = ({ rfidHook }) => {
     return [];
   };
 
+  const fetchLinenDataAndCheck = async (epc, index) => {
+    if (!epc.trim()) return;
+
+    try {
+      const token = await window.authAPI.getToken();
+      const response = await fetch(
+        `${baseUrl}/Process/linen_rfid?epc=${encodeURIComponent(epc)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data && result.data.length > 0) {
+          const linenData = result.data[0];
+
+          // Check if the linen belongs to the selected customer
+          const isValidCustomer =
+            !formData.customerId ||
+            linenData.customerId === formData.customerId;
+
+          // Add to valid EPCs set
+          setValidEpcs(prev => new Set([...prev, epc]));
+
+          // EPC found in API - keep the row with fetched data
+          setLinens((prev) =>
+            prev.map((linen, i) =>
+              i === index
+                ? {
+                    ...linen,
+                    epc: linenData.epc,
+                    customerId: linenData.customerId,
+                    customerName: linenData.customerName,
+                    linenId: linenData.linenId,
+                    linenTypeName: linenData.linenTypeName,
+                    linenName: linenData.linenName,
+                    roomId: linenData.roomId,
+                    roomName: linenData.roomName,
+                    statusId: linenData.statusId,
+                    status: linenData.status,
+                    loading: false,
+                    isValidCustomer: isValidCustomer,
+                    errorMessage: !isValidCustomer
+                      ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                      : null,
+                  }
+                : linen
+            )
+          );
+        } else {
+          // EPC not found in API - remove the row
+          console.log(`EPC ${epc} tidak ditemukan di API, menghapus baris`);
+          setLinens((prev) => {
+            const filtered = prev.filter((_, i) => i !== index);
+            // Ensure at least one empty row remains
+            return filtered.length > 0
+              ? filtered
+              : [
+                  {
+                    epc: "",
+                    status_id: 1,
+                    loading: false,
+                    isValidCustomer: true,
+                  },
+                ];
+          });
+
+          // Remove from processed tags so it can be scanned again if needed
+          setProcessedTags((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(epc);
+            return newSet;
+          });
+        }
+      } else {
+        console.error("Failed to fetch linen data for EPC:", epc);
+        // Remove the row on API error as well
+        setLinens((prev) => {
+          const filtered = prev.filter((_, i) => i !== index);
+          return filtered.length > 0
+            ? filtered
+            : [
+                {
+                  epc: "",
+                  status_id: 1,
+                  loading: false,
+                  isValidCustomer: true,
+                },
+              ];
+        });
+
+        setProcessedTags((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(epc);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching linen data:", error);
+      // Remove the row on error as well
+      setLinens((prev) => {
+        const filtered = prev.filter((_, i) => i !== index);
+        return filtered.length > 0
+          ? filtered
+          : [{ epc: "", status_id: 1, loading: false, isValidCustomer: true }];
+      });
+
+      setProcessedTags((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(epc);
+        return newSet;
+      });
+    }
+  };
+
   const fetchLinenData = async (epc, index) => {
     if (!epc.trim()) return;
 
@@ -146,20 +266,20 @@ const LinenCleanPage = ({ rfidHook }) => {
             )
           );
         } else {
-          // No data found for this EPC
-          setLinens((prev) =>
-            prev.map((linen, i) =>
-              i === index
-                ? {
-                    ...linen,
+          // No data found for this EPC - remove the row
+          setLinens((prev) => {
+            const filtered = prev.filter((_, i) => i !== index);
+            return filtered.length > 0
+              ? filtered
+              : [
+                  {
+                    epc: "",
+                    status_id: 1,
                     loading: false,
-                    status: "Data tidak ditemukan",
-                    isValidCustomer: false,
-                    errorMessage: "Data tidak ditemukan",
-                  }
-                : linen
-            )
-          );
+                    isValidCustomer: true,
+                  },
+                ];
+          });
         }
       } else {
         console.error("Failed to fetch linen data for EPC:", epc);
@@ -247,15 +367,27 @@ const LinenCleanPage = ({ rfidHook }) => {
           );
 
           if (emptyRowIndex !== -1) {
-            handleLinenChange(emptyRowIndex, "epc", latestTag.EPC);
-            fetchLinenData(latestTag.EPC, emptyRowIndex);
+            // First add EPC to the row, then fetch data to validate
+            const updatedLinens = [...linens];
+            updatedLinens[emptyRowIndex].epc = latestTag.EPC;
+            updatedLinens[emptyRowIndex].loading = true;
+            setLinens(updatedLinens);
+
+            // Check if EPC exists in API before finalizing the row
+            fetchLinenDataAndCheck(latestTag.EPC, emptyRowIndex);
           } else {
+            // Create new row and check API first
             const newIndex = linens.length;
             setLinens((prev) => [
               ...prev,
-              { epc: latestTag.EPC, status_id: 1, loading: false },
+              { epc: latestTag.EPC, status_id: 1, loading: true },
             ]);
-            setTimeout(() => fetchLinenData(latestTag.EPC, newIndex), 100);
+
+            // Check API before keeping the row
+            setTimeout(
+              () => fetchLinenDataAndCheck(latestTag.EPC, newIndex),
+              100
+            );
           }
         } else {
           console.log(
@@ -264,7 +396,7 @@ const LinenCleanPage = ({ rfidHook }) => {
         }
       }
     }
-  }, [linenBersihTags, processedTags, linens]);
+  }, [linenBersihTags]);
 
   useEffect(() => {
     const validLinens = linens.filter((linen) => linen.epc?.trim());
@@ -272,7 +404,7 @@ const LinenCleanPage = ({ rfidHook }) => {
       ...prev,
       linenQty: validLinens.length,
     }));
-  }, [linens]);
+  }, [linens.length]); // Optimize to only run when linen count changes
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -331,6 +463,7 @@ const LinenCleanPage = ({ rfidHook }) => {
       { epc: "", status_id: 1, loading: false, isValidCustomer: true },
     ]);
     setProcessedTags(new Set());
+    setValidEpcs(new Set());
   };
 
   const handleSubmit = async (e) => {
@@ -407,6 +540,7 @@ const LinenCleanPage = ({ rfidHook }) => {
         { epc: "", status_id: 1, loading: false, isValidCustomer: true },
       ]);
       setProcessedTags(new Set());
+      setValidEpcs(new Set());
 
       // Stop scanning if active
       if (isLinenBersihActive) {

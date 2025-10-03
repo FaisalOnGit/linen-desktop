@@ -18,12 +18,72 @@ export const useRfid = () => {
   const [isLinenBersihActive, setIsLinenBersihActive] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
 
+  // Centralized connection state
+  const [connectionStatus, setConnectionStatus] = useState({
+    connected: false,
+    connecting: false,
+    error: null,
+  });
+
   const logRef = useRef(null);
-  const groupingIntervalRef = useRef(null);
-  const sortingIntervalRef = useRef(null);
-  const registerIntervalRef = useRef(null);
-  const deliveryIntervalRef = useRef(null);
-  const linenBersihIntervalRef = useRef(null);
+  const intervalRefs = useRef({
+    grouping: null,
+    sorting: null,
+    register: null,
+    delivery: null,
+    linenBersih: null,
+  });
+
+  // Cleanup all intervals function
+  const clearAllIntervals = useCallback(() => {
+    Object.values(intervalRefs.current).forEach((intervalRef) => {
+      if (intervalRef) {
+        clearInterval(intervalRef);
+      }
+    });
+
+    // Reset all interval refs
+    intervalRefs.current = {
+      grouping: null,
+      sorting: null,
+      register: null,
+      delivery: null,
+      linenBersih: null,
+    };
+  }, []);
+
+  // Clear all data function (resets both intervals and tag data)
+  const clearAllData = useCallback(() => {
+    // Clear all intervals first
+    clearAllIntervals();
+
+    // Reset all tag data
+    setTags([]);
+    setRegisterTags([]);
+    setGroupingTags([]);
+    setSortingTags([]);
+    setDeliveryTags([]);
+    setLinenBersihTags([]);
+
+    // Reset all active states
+    setIsGroupingActive(false);
+    setIsSortingActive(false);
+    setIsRegisterActive(false);
+    setIsDeliveryActive(false);
+    setIsLinenBersihActive(false);
+
+    // Clear logs
+    setLogs("");
+
+    console.log("🧹 All RFID data cleared");
+  }, [clearAllIntervals]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearAllData();
+    };
+  }, [clearAllData]);
 
   // Load config on hook initialization
   useEffect(() => {
@@ -116,6 +176,11 @@ export const useRfid = () => {
   const connect = async (ipAddress, portNumber) => {
     if (!isRfidAvailable) {
       log("❌ RFID API not available");
+      setConnectionStatus({
+        connected: false,
+        connecting: false,
+        error: "RFID API not available",
+      });
       return false;
     }
 
@@ -123,15 +188,23 @@ export const useRfid = () => {
     const targetIp = ipAddress || ip;
     const targetPort = portNumber || port;
 
+    setConnectionStatus((prev) => ({ ...prev, connecting: true, error: null }));
+
     try {
       const res = await window.rfidAPI.connect({
         ip: targetIp,
         port: targetPort,
       });
       log("✅ Connected: " + JSON.stringify(res));
+      setConnectionStatus({ connected: true, connecting: false, error: null });
       return true;
     } catch (err) {
       log("❌ Connect Error: " + err.message);
+      setConnectionStatus({
+        connected: false,
+        connecting: false,
+        error: err.message,
+      });
       return false;
     }
   };
@@ -139,15 +212,26 @@ export const useRfid = () => {
   const disconnect = async () => {
     if (!isRfidAvailable) {
       log("❌ RFID API not available");
+      setConnectionStatus({
+        connected: false,
+        connecting: false,
+        error: "RFID API not available",
+      });
       return false;
     }
 
     try {
       const res = await window.rfidAPI.disconnect();
       log("🔌 Disconnected: " + JSON.stringify(res));
+      setConnectionStatus({ connected: false, connecting: false, error: null });
       return true;
     } catch (err) {
       log("❌ Disconnect Error: " + err.message);
+      setConnectionStatus({
+        connected: false,
+        connecting: false,
+        error: err.message,
+      });
       return false;
     }
   };
@@ -261,11 +345,17 @@ export const useRfid = () => {
       return;
     }
 
+    // Clear existing interval if any
+    if (intervalRefs.current.register) {
+      clearInterval(intervalRefs.current.register);
+      intervalRefs.current.register = null;
+    }
+
     try {
       await window.rfidAPI.startInventory();
       setIsRegisterActive(true);
 
-      registerIntervalRef.current = setInterval(async () => {
+      intervalRefs.current.register = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
           setRegisterTags(tagsData);
@@ -287,9 +377,9 @@ export const useRfid = () => {
     try {
       await window.rfidAPI.stopInventory();
       setIsRegisterActive(false);
-      if (registerIntervalRef.current) {
-        clearInterval(registerIntervalRef.current);
-        registerIntervalRef.current = null;
+      if (intervalRefs.current.register) {
+        clearInterval(intervalRefs.current.register);
+        intervalRefs.current.register = null;
       }
     } catch (err) {
       console.error("Error stopping register:", err);
@@ -306,11 +396,17 @@ export const useRfid = () => {
       return;
     }
 
+    // Clear existing interval if any
+    if (intervalRefs.current.grouping) {
+      clearInterval(intervalRefs.current.grouping);
+      intervalRefs.current.grouping = null;
+    }
+
     try {
       await window.rfidAPI.startInventory();
       setIsGroupingActive(true);
 
-      groupingIntervalRef.current = setInterval(async () => {
+      intervalRefs.current.grouping = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
           const enrichedTags = tagsData.map((tag) => ({
@@ -339,8 +435,9 @@ export const useRfid = () => {
     try {
       await window.rfidAPI.stopInventory();
       setIsGroupingActive(false);
-      if (groupingIntervalRef.current) {
-        clearInterval(groupingIntervalRef.current);
+      if (intervalRefs.current.grouping) {
+        clearInterval(intervalRefs.current.grouping);
+        intervalRefs.current.grouping = null;
       }
     } catch (err) {
       console.error("Error stopping grouping:", err);
@@ -356,11 +453,17 @@ export const useRfid = () => {
       return;
     }
 
+    // Clear existing interval if any
+    if (intervalRefs.current.sorting) {
+      clearInterval(intervalRefs.current.sorting);
+      intervalRefs.current.sorting = null;
+    }
+
     try {
       await window.rfidAPI.startInventory();
       setIsSortingActive(true);
 
-      sortingIntervalRef.current = setInterval(async () => {
+      intervalRefs.current.sorting = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
           // bedakan by antennaId
@@ -390,8 +493,9 @@ export const useRfid = () => {
     try {
       await window.rfidAPI.stopInventory();
       setIsSortingActive(false);
-      if (sortingIntervalRef.current) {
-        clearInterval(sortingIntervalRef.current);
+      if (intervalRefs.current.sorting) {
+        clearInterval(intervalRefs.current.sorting);
+        intervalRefs.current.sorting = null;
       }
     } catch (err) {
       console.error("Error stopping sorting:", err);
@@ -408,11 +512,17 @@ export const useRfid = () => {
       return;
     }
 
+    // Clear existing interval if any
+    if (intervalRefs.current.delivery) {
+      clearInterval(intervalRefs.current.delivery);
+      intervalRefs.current.delivery = null;
+    }
+
     try {
       await window.rfidAPI.startInventory();
       setIsDeliveryActive(true);
 
-      deliveryIntervalRef.current = setInterval(async () => {
+      intervalRefs.current.delivery = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
           const enrichedTags = tagsData.map((tag) => ({
@@ -442,9 +552,9 @@ export const useRfid = () => {
     try {
       await window.rfidAPI.stopInventory();
       setIsDeliveryActive(false);
-      if (deliveryIntervalRef.current) {
-        clearInterval(deliveryIntervalRef.current);
-        deliveryIntervalRef.current = null;
+      if (intervalRefs.current.delivery) {
+        clearInterval(intervalRefs.current.delivery);
+        intervalRefs.current.delivery = null;
       }
     } catch (err) {
       console.error("Error stopping delivery:", err);
@@ -461,11 +571,17 @@ export const useRfid = () => {
       return;
     }
 
+    // Clear existing interval if any
+    if (intervalRefs.current.linenBersih) {
+      clearInterval(intervalRefs.current.linenBersih);
+      intervalRefs.current.linenBersih = null;
+    }
+
     try {
       await window.rfidAPI.startInventory();
       setIsLinenBersihActive(true);
 
-      linenBersihIntervalRef.current = setInterval(async () => {
+      intervalRefs.current.linenBersih = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
           const enrichedTags = tagsData.map((tag) => ({
@@ -496,9 +612,9 @@ export const useRfid = () => {
     try {
       await window.rfidAPI.stopInventory();
       setIsLinenBersihActive(false);
-      if (linenBersihIntervalRef.current) {
-        clearInterval(linenBersihIntervalRef.current);
-        linenBersihIntervalRef.current = null;
+      if (intervalRefs.current.linenBersih) {
+        clearInterval(intervalRefs.current.linenBersih);
+        intervalRefs.current.linenBersih = null;
       }
     } catch (err) {
       console.error("Error stopping linen bersih:", err);
@@ -526,12 +642,15 @@ export const useRfid = () => {
     isDeliveryActive,
     isLinenBersihActive,
     configLoaded, // New state to track if config is loaded
+
+    // Centralized connection state
+    isConnected: connectionStatus.connected,
+    isConnecting: connectionStatus.connecting,
+    connectionError: connectionStatus.error,
+
+    // Refs
     logRef,
-    groupingIntervalRef,
-    sortingIntervalRef,
-    registerIntervalRef,
-    deliveryIntervalRef,
-    linenBersihIntervalRef,
+    intervalRefs,
 
     // Methods
     connect,
@@ -555,5 +674,7 @@ export const useRfid = () => {
     isRfidAvailable,
     reloadConfig,
     saveConfig,
+    clearAllIntervals,
+    clearAllData,
   };
 };

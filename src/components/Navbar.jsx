@@ -6,6 +6,7 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  Printer,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
 
@@ -18,26 +19,16 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
     port,
     connect,
     disconnect,
-    // You might want to add a connection status from your rfidHook
-    // For now, I'll create a local state to track connection
+    isConnected,
+    isConnecting,
+    connectionError,
   } = rfidHook || {};
-
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = async () => {
     if (isConnected) {
-      setIsConnecting(true);
       await disconnect();
-      setIsConnected(false);
-      setIsConnecting(false);
     } else {
-      setIsConnecting(true);
-      const success = await connect(ip, port);
-      if (success !== false) {
-        setIsConnected(true);
-      }
-      setIsConnecting(false);
+      await connect(ip, port);
     }
   };
 
@@ -70,6 +61,18 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
           ],
         },
         {
+          title: "Grouping",
+          commands: [
+            {
+              id: "grouping",
+              label: "Grouping\nLinen",
+              icon: FileText,
+              size: "large",
+              description: "Group linen items",
+            },
+          ],
+        },
+        {
           title: "Distribution",
           commands: [
             {
@@ -95,6 +98,13 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               icon: Settings,
               size: "large",
               description: "Configure RFID reader",
+            },
+            {
+              id: "print-test",
+              label: "Print\nTest",
+              icon: Printer,
+              size: "large",
+              description: "Test label printing",
             },
           ],
         },
@@ -147,8 +157,17 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
                       : "bg-red-600 text-white"
                   }`}
                 >
-                  {isConnected ? "Connected" : "Disconnected"}
+                  {isConnecting
+                    ? "Connecting..."
+                    : isConnected
+                    ? "Connected"
+                    : "Disconnected"}
                 </span>
+                {connectionError && (
+                  <span className="text-xs text-red-300">
+                    {connectionError}
+                  </span>
+                )}
               </div>
 
               {/* Connect/Disconnect Button */}

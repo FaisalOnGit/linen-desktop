@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const GroupingTable = ({ groupingTags }) => {
+const GroupingTable = ({ groupingTags, isCompact = false }) => {
   const [enrichedTags, setEnrichedTags] = useState([]);
   const [loadingTags, setLoadingTags] = useState(new Set());
 
@@ -74,13 +74,8 @@ const GroupingTable = ({ groupingTags }) => {
             EPC: epc,
             linenName: apiData?.linenName || tag.linenName || "-",
             customerName: apiData?.customerName || tag.customerName || "-",
-            room: apiData?.roomName || tag.room || "-",
+            room: apiData?.roomName || tag.roomName || "-",
             status: apiData?.status || tag.status || "-",
-            linenTypeName: apiData?.linenTypeName || tag.linenTypeName,
-            customerId: apiData?.customerId || tag.customerId,
-            linenId: apiData?.linenId || tag.linenId,
-            roomId: apiData?.roomId || tag.roomId,
-            statusId: apiData?.statusId || tag.statusId,
             // Add loading flag
             isLoaded: !!apiData,
           };
@@ -126,35 +121,32 @@ const GroupingTable = ({ groupingTags }) => {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-200 border-b">
-              <th className="text-left py-4 px-4 font-medium text-gray-700">
+            <tr className={`border-b ${isCompact ? "bg-gray-100" : "bg-gray-200"}`}>
+              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
                 No Seri RFID
               </th>
-              <th className="text-left py-4 px-4 font-medium text-gray-700">
+              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
                 Nama Linen
               </th>
-              <th className="text-left py-4 px-4 font-medium text-gray-700">
+              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
                 Nama Customer
               </th>
-              <th className="text-left py-4 px-4 font-medium text-gray-700">
+              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
                 Ruangan
               </th>
-              <th className="text-left py-4 px-4 font-medium text-gray-700">
+              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
                 Status Linen
-              </th>
-              <th className="text-left py-4 px-4 font-medium text-gray-700">
-                Info
               </th>
             </tr>
           </thead>
           <tbody>
             {enrichedTags.length === 0 ? (
               <tr>
-                <td colSpan="6" className="py-8 px-4 text-center text-gray-500">
+                <td colSpan="5" className={`${isCompact ? "py-4 px-2" : "py-8 px-4"} text-center text-gray-500`}>
                   <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                    <div className={`${isCompact ? "w-8 h-8" : "w-12 h-12"} bg-gray-100 rounded-full flex items-center justify-center mb-2`}>
                       <svg
-                        className="w-6 h-6 text-gray-400"
+                        className={`${isCompact ? "w-4 h-4" : "w-6 h-6"} text-gray-400`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -167,8 +159,8 @@ const GroupingTable = ({ groupingTags }) => {
                         />
                       </svg>
                     </div>
-                    <p>Tidak ada tag terdeteksi</p>
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className={isCompact ? "text-xs" : ""}>Tidak ada tag terdeteksi</p>
+                    <p className={`text-gray-400 mt-1 ${isCompact ? "text-xs" : "text-sm"}`}>
                       Mulai pemindaian untuk melihat data
                     </p>
                   </div>
@@ -182,100 +174,43 @@ const GroupingTable = ({ groupingTags }) => {
                 return (
                   <tr
                     key={`${epc}-${index}`}
-                    className="border-b hover:bg-gray-50 transition-colors"
+                    className={`border-b hover:bg-gray-50 transition-colors ${isCompact ? "text-xs" : ""}`}
                   >
-                    <td className="py-4 px-4 text-gray-800 font-mono text-sm">
+                    <td className={`${isCompact ? "py-2 px-2 font-mono text-xs" : "py-4 px-4 font-mono text-sm"} text-gray-800`}>
                       {epc || "N/A"}
                     </td>
-                    <td className="py-4 px-4 text-gray-800">
+                    <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"} text-gray-800`}>
                       {isLoading ? (
                         <div className="flex items-center">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                          <span className="text-gray-400">Loading...</span>
+                          <div className={`animate-spin rounded-full ${isCompact ? "h-3 w-3" : "h-4 w-4"} border-b-2 border-blue-600 mr-1`}></div>
+                          <span className={`text-gray-400 ${isCompact ? "text-xs" : ""}`}>Loading...</span>
                         </div>
                       ) : (
-                        <div>
-                          <div className="font-medium">{tag.linenName}</div>
-                          {tag.linenTypeName && (
-                            <div className="text-sm text-gray-500">
-                              {tag.linenTypeName}
-                            </div>
-                          )}
-                        </div>
+                        <div className={isCompact ? "text-xs" : "font-medium"}>{tag.linenName}</div>
                       )}
                     </td>
-                    <td className="py-4 px-4 text-gray-800">
+                    <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"} text-gray-800`}>
                       {isLoading ? (
-                        <div className="animate-pulse bg-gray-200 h-4 w-20 rounded"></div>
+                        <div className={`animate-pulse bg-gray-200 ${isCompact ? "h-3 w-16" : "h-4 w-20"} rounded`}></div>
                       ) : (
-                        <div>
-                          <div className="font-medium">{tag.customerName}</div>
-                          {tag.customerId &&
-                            tag.customerId !== tag.customerName && (
-                              <div className="text-sm text-gray-500">
-                                {tag.customerId}
-                              </div>
-                            )}
-                        </div>
+                        <div className={isCompact ? "text-xs" : "font-medium"}>{tag.customerName}</div>
                       )}
                     </td>
-                    <td className="py-4 px-4 text-gray-800">
+                    <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"} text-gray-800`}>
                       {isLoading ? (
-                        <div className="animate-pulse bg-gray-200 h-4 w-16 rounded"></div>
+                        <div className={`animate-pulse bg-gray-200 ${isCompact ? "h-3 w-12" : "h-4 w-16"} rounded`}></div>
                       ) : (
-                        <div>
-                          <div className="font-medium">{tag.room}</div>
-                          {tag.roomId && tag.roomId !== tag.room && (
-                            <div className="text-sm text-gray-500">
-                              {tag.roomId}
-                            </div>
-                          )}
-                        </div>
+                        <div className={isCompact ? "text-xs" : "font-medium"}>{tag.room}</div>
                       )}
                     </td>
-                    <td className="py-4 px-4">
+                    <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"}`}>
                       {isLoading ? (
-                        <div className="animate-pulse bg-gray-200 h-6 w-16 rounded-full"></div>
+                        <div className={`animate-pulse bg-gray-200 ${isCompact ? "h-4 w-12" : "h-6 w-16"} rounded-full`}></div>
                       ) : (
-                        <span className={getStatusColor(tag.status)}>
+                        <span className={isCompact ? getStatusColor(tag.status).replace("px-2 py-1", "px-1 py-0.5 text-xs") : getStatusColor(tag.status)}>
                           {tag.status}
                         </span>
                       )}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        {tag.isLoaded ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <svg
-                              className="w-3 h-3 mr-1"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            API
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            <svg
-                              className="w-3 h-3 mr-1"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            RFID
-                          </span>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 );
@@ -286,19 +221,9 @@ const GroupingTable = ({ groupingTags }) => {
       </div>
 
       {enrichedTags.length > 0 && (
-        <div className="p-4 bg-gray-50 border-t text-sm text-gray-600">
-          <div className="flex items-center justify-between">
+        <div className={`bg-gray-50 border-t text-gray-600 ${isCompact ? "p-2 text-xs" : "p-4 text-sm"}`}>
+          <div className="flex items-center justify-center">
             <div>Total: {enrichedTags.length} tag(s) terdeteksi</div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                <span>Data dari API</span>
-              </div>
-              <div className="flex items-center">
-                <span className="inline-block w-3 h-3 bg-gray-400 rounded-full mr-2"></span>
-                <span>Data RFID saja</span>
-              </div>
-            </div>
           </div>
         </div>
       )}

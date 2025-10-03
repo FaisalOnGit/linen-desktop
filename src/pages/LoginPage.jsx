@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import LoginLogo from "../../public/login.png";
 
 const LoginPage = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("admin@nci.co.id");
-  const [password, setPassword] = useState("#Linen123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -93,7 +94,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       }}
     >
       <div className="absolute top-8 left-8">
-        <img src="/login.png" alt="OSLA Logo" className="w-20 h-20" />
+        <img src={LoginLogo} alt="OSLA Logo" className="w-20 h-20" />
       </div>
 
       <div className="w-full max-w-md">

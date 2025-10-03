@@ -10,6 +10,9 @@ const path = require("path");
 const fs = require("fs");
 const { Worker } = require("worker_threads");
 const { loadConfig, saveConfig } = require("./config");
+const { exec } = require("child_process");
+const util = require("util");
+const execPromise = util.promisify(exec);
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
@@ -21,17 +24,15 @@ function getDllPath() {
     // Development mode
     dllPath = path.join(__dirname, "lib", "ZebraLib.dll");
   } else {
-    // Production mode - check multiple possible locations
     const possiblePaths = [
-      // From executable directory (extraFiles)
       path.join(path.dirname(process.execPath), "ZebraLib.dll"),
-      // From extraResources
+
       path.join(process.resourcesPath, "lib", "ZebraLib.dll"),
-      // From app directory
+
       path.join(__dirname, "lib", "ZebraLib.dll"),
-      // From parent directory
+
       path.join(path.dirname(__dirname), "lib", "ZebraLib.dll"),
-      // From resources directory
+
       path.join(
         path.dirname(process.execPath),
         "resources",
@@ -50,14 +51,12 @@ function getDllPath() {
     }
 
     if (!dllPath) {
-      // Debug info
       console.error("=== DLL Path Debug Info ===");
       console.error("__dirname:", __dirname);
       console.error("process.execPath:", process.execPath);
       console.error("process.resourcesPath:", process.resourcesPath);
       console.error("app.getAppPath():", app.getAppPath());
 
-      // List files in resource directory
       try {
         console.error(
           "Files in resourcesPath:",
@@ -81,7 +80,6 @@ function getDllPath() {
   return dllPath;
 }
 
-// Initialize DLL path and edge functions
 let dllPath;
 let connect,
   startInventory,
@@ -96,15 +94,13 @@ function initializeRfidFunctions() {
     dllPath = getDllPath();
     const edge = require("electron-edge-js");
 
-    // Set .NET Framework version untuk edge-js
-    process.env.EDGE_USE_CORECLR = "0"; // Force menggunakan .NET Framework, bukan .NET Core
+    process.env.EDGE_USE_CORECLR = "0";
 
-    // Edge functions untuk RFID dengan explicit .NET Framework config
     connect = edge.func({
       assemblyFile: dllPath,
       typeName: "ZebraLib.RfidWrapper",
       methodName: "Connect",
-      sync: false, // Pastikan async
+      sync: false,
     });
 
     startInventory = edge.func({
@@ -165,7 +161,7 @@ let rfidInitialized = false;
 function createWindow() {
   const win = new BrowserWindow({
     title: "RFID Dashboard",
-    icon: path.join(__dirname, "assets", "icon.png"),
+    icon: path.join(__dirname, "..", "assets", "icons", "electron-icon.ico"),
     width: 1200,
     height: 800,
     autoHideMenuBar: true,
@@ -226,18 +222,15 @@ function createWindow() {
   return win;
 }
 
-// IPC untuk ambil config
 ipcMain.handle("get-config", () => {
   return loadConfig();
 });
 
-// IPC untuk simpan config
 ipcMain.handle("save-config", (event, config) => {
   saveConfig(config);
   return true;
 });
 
-// RFID IPC Handlers
 ipcMain.handle("rfid-connect", async (event, config) => {
   if (!rfidInitialized) {
     try {
@@ -412,6 +405,120 @@ ipcMain.handle("rfid-status", async () => {
     inventoryRunning: isInventoryRunning,
     initialized: rfidInitialized,
   };
+});
+
+// Printer IPC Handlers using Windows raw printing
+ipcMain.handle("print-label", async (event, printData) => {
+  try {
+    const { zpl, printer: printerConfig } = printData;
+    console.log("Printer config:", printerConfig);
+
+    // Get the printer name
+    const printerName =
+      printerConfig.printerName || "ZDesigner ZD888-203dpi ZPL (Copy 1)";
+
+    // Create temporary file for ZPL data
+    const tempFile = path.join(
+      require("os").tmpdir(),
+      `print_${Date.now()}.zpl`
+    );
+    fs.writeFileSync(tempFile, zpl, "utf8");
+
+    console.log("Printing to:", printerName);
+    console.log("ZPL data:", zpl);
+    console.log("Temp file:", tempFile);
+
+    // Use the method that was printing (even with format issues)
+    try {
+      // Use PowerShell Out-Printer method
+      const psCommand = `Get-Content "${tempFile}" | Out-Printer -Name "${printerName}"`;
+
+      await execPromise(`powershell -Command "${psCommand}"`);
+      console.log("Print job sent successfully via PowerShell");
+    } catch (error) {
+      console.error("Print error:", error);
+      throw new Error(`Print failed: ${error.message}`);
+    }
+
+    // Clean up temp file
+    try {
+      fs.unlinkSync(tempFile);
+    } catch (cleanupError) {
+      console.warn("Failed to clean up temp file:", cleanupError.message);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Print error:", error);
+    throw new Error(`Print failed: ${error.message}`);
+  }
+});
+
+ipcMain.handle("get-printers", async () => {
+  try {
+    // Get list of printers using PowerShell
+    const psCommand =
+      "Get-WmiObject -Class Win32_Printer | Select-Object Name, Status | ConvertTo-Json";
+
+    try {
+      const { stdout } = await execPromise(
+        `powershell -Command "${psCommand}"`
+      );
+      const printersData = JSON.parse(stdout);
+
+      // Handle single printer (PowerShell returns object, not array for single item)
+      const printers = Array.isArray(printersData)
+        ? printersData
+        : [printersData];
+
+      return printers.map((p) => ({
+        name: p.Name,
+        status: p.Status || "Ready",
+        isDefault: false, // We'll check default separately if needed
+      }));
+    } catch (psError) {
+      console.log("PowerShell method failed, using fallback list...");
+
+      // Fallback to common Windows printer names
+      const commonPrinters = [
+        "ZDesigner ZD888-203dpi ZPL (Copy 1)",
+        "ZDesigner ZD888-203dpi ZPL",
+        "Microsoft Print to PDF",
+        "Fax",
+        "Microsoft XPS Document Writer",
+      ];
+      return commonPrinters.map((name) => ({ name, status: "unknown" }));
+    }
+  } catch (error) {
+    console.error("Get printers error:", error);
+    return [];
+  }
+});
+
+ipcMain.handle("test-printer-connection", async (event, printerConfig) => {
+  try {
+    const { printerName } = printerConfig;
+
+    if (!printerName) {
+      throw new Error("Printer name is required");
+    }
+
+    // Check if printer exists in the system
+    const psCommand = `Get-WmiObject -Class Win32_Printer -Filter "Name='${printerName}'" | Select-Object Name`;
+
+    try {
+      const { stdout } = await execPromise(
+        `powershell -Command "${psCommand}"`
+      );
+      return stdout.includes(printerName);
+    } catch (psError) {
+      console.log("PowerShell check failed, assuming printer exists...");
+      return true; // Assume printer exists if we can't check
+    }
+  } catch (error) {
+    console.error("Test connection error:", error);
+    return false;
+  }
 });
 
 app.whenReady().then(() => {

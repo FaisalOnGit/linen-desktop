@@ -1,6 +1,14 @@
 import React, { useState } from "react";
-import { Play, CircleStop, Wifi, WifiOff, Activity } from "lucide-react";
+import {
+  Play,
+  CircleStop,
+  Wifi,
+  WifiOff,
+  Activity,
+  Monitor,
+} from "lucide-react";
 import LogViewer from "../components/LogViewer";
+import { useTableMode } from "../contexts/TableModeContext";
 
 const SettingPage = ({ rfidHook }) => {
   const {
@@ -16,7 +24,12 @@ const SettingPage = ({ rfidHook }) => {
     getStatus,
     logs,
     logRef,
+    isConnected,
+    isConnecting,
+    connectionError,
   } = rfidHook;
+
+  const { tableMode, handleTableModeChange } = useTableMode();
 
   const [antennas, setAntennas] = useState({
     1: false,
@@ -31,7 +44,6 @@ const SettingPage = ({ rfidHook }) => {
     4: 15,
   });
   const [isApplying, setIsApplying] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [isInventoryActive, setIsInventoryActive] = useState(false);
 
   const handleAntennaChange = (antennaId) => {
@@ -51,13 +63,9 @@ const SettingPage = ({ rfidHook }) => {
   const handleConnect = async () => {
     if (isConnected) {
       await disconnect();
-      setIsConnected(false);
       setIsInventoryActive(false);
     } else {
-      const success = await connect(ip, port);
-      if (success !== false) {
-        setIsConnected(true);
-      }
+      await connect(ip, port);
     }
   };
 
@@ -140,6 +148,37 @@ const SettingPage = ({ rfidHook }) => {
 
   return (
     <div>
+      {/* Table Mode Settings */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <span className="text-gray-700 font-medium">Mode Tabel:</span>
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => handleTableModeChange("single")}
+                className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                  tableMode === "single"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                Single
+              </button>
+              <button
+                onClick={() => handleTableModeChange("double")}
+                className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                  tableMode === "double"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                Double
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Connection Settings */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
@@ -179,14 +218,31 @@ const SettingPage = ({ rfidHook }) => {
           <div className="flex space-x-3">
             <button
               onClick={handleConnect}
+              disabled={isConnecting}
               className={`px-6 py-2 border rounded-lg font-medium flex items-center space-x-2 transition-colors duration-200 ${
                 isConnected
                   ? "border-red-300 text-red-700 hover:bg-red-50"
                   : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              } ${
+                isConnecting
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer"
               }`}
             >
-              {isConnected ? <WifiOff size={16} /> : <Wifi size={16} />}
-              <span>{isConnected ? "Disconnect" : "Connect"}</span>
+              {isConnecting ? (
+                <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+              ) : isConnected ? (
+                <WifiOff size={16} />
+              ) : (
+                <Wifi size={16} />
+              )}
+              <span>
+                {isConnecting
+                  ? "Connecting..."
+                  : isConnected
+                  ? "Disconnect"
+                  : "Connect"}
+              </span>
             </button>
             <button
               onClick={handleStartInventory}
