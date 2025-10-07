@@ -1,5 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { Play, Plus, Trash2, Square, Truck } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Play,
+  Plus,
+  Trash2,
+  Square,
+  Truck,
+  Printer,
+  CheckCircle,
+  AlertCircle,
+  Settings,
+  FileText,
+} from "lucide-react";
 
 const DeliveryPage = ({ rfidHook }) => {
   const {
@@ -25,6 +36,19 @@ const DeliveryPage = ({ rfidHook }) => {
   ]);
   const [processedTags, setProcessedTags] = useState(new Set());
   const baseUrl = import.meta.env.VITE_BASE_URL;
+
+  // Printer state
+  const [printerStatus, setPrinterStatus] = useState("loading");
+  const [lastPrintTime, setLastPrintTime] = useState(null);
+  const [printError, setPrintError] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState(null);
+  const [devices, setDevices] = useState([]);
+  const [printerMessage, setPrinterMessage] = useState("Loading...");
+  const [browserPrintStatus, setBrowserPrintStatus] = useState("Checking...");
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [selectedLinenForPrint, setSelectedLinenForPrint] = useState(null);
+
+  const iframeRef = useRef(null);
 
   const fetchCustomers = async (searchTerm = "") => {
     setLoadingCustomers(true);
@@ -63,6 +87,200 @@ const DeliveryPage = ({ rfidHook }) => {
       setCustomers([]);
     } finally {
       setLoadingCustomers(false);
+    }
+  };
+
+  const setupZebraPrinter = () => {
+    // Check if BrowserPrint is loaded
+    if (!window.BrowserPrint) {
+      setBrowserPrintStatus("Error: Zebra Browser Print not loaded");
+      setPrinterMessage(
+        "Zebra Browser Print not available. Please install Zebra Browser Print."
+      );
+      setPrinterStatus("idle");
+      return;
+    }
+
+    setBrowserPrintStatus("BrowserPrint loaded successfully");
+
+    // Get default printer device
+    window.BrowserPrint.getDefaultDevice(
+      "printer",
+      (device) => {
+        if (device) {
+          setSelectedDevice(device);
+          setDevices([device]);
+          setPrinterMessage("Printer connected: " + device.name);
+          setPrinterStatus("idle");
+          console.log("Default device found:", device);
+        } else {
+          setPrinterMessage(
+            "No default printer found. Searching for devices..."
+          );
+        }
+
+        // Discover other available devices
+        window.BrowserPrint.getLocalDevices(
+          (deviceList) => {
+            console.log("Device list:", deviceList);
+            if (deviceList && deviceList.length > 0) {
+              const allDevices = device ? [device] : [];
+              deviceList.forEach((dev) => {
+                if (!device || dev.uid !== device.uid) {
+                  allDevices.push(dev);
+                }
+              });
+              setDevices(allDevices);
+              if (allDevices.length > 0 && !selectedDevice) {
+                setSelectedDevice(allDevices[0]);
+                setPrinterMessage("Printer found: " + allDevices[0].name);
+              }
+              setPrinterStatus("idle");
+            } else {
+              setPrinterMessage(
+                "No Zebra printers found. Please check printer connection."
+              );
+              setPrinterStatus("idle");
+            }
+          },
+          (error) => {
+            setPrinterMessage("Error getting local devices: " + error);
+            setPrinterStatus("idle");
+            console.error("Error getting local devices:", error);
+          },
+          "printer"
+        );
+      },
+      (error) => {
+        setPrinterMessage("Error getting default device: " + error);
+        console.error("Error getting default device:", error);
+
+        // Try to get local devices anyway
+        window.BrowserPrint.getLocalDevices(
+          (deviceList) => {
+            console.log("Fallback - Device list:", deviceList);
+            if (deviceList && deviceList.length > 0) {
+              setDevices(deviceList);
+              setSelectedDevice(deviceList[0]);
+              setPrinterMessage("Printer found: " + deviceList[0].name);
+              setPrinterStatus("idle");
+            } else {
+              setPrinterMessage("No Zebra printers detected");
+              setPrinterStatus("idle");
+            }
+          },
+          (error) => {
+            setPrinterMessage("Error: No printers found - " + error);
+            setPrinterStatus("idle");
+            console.error("Error in fallback:", error);
+          },
+          "printer"
+        );
+      }
+    );
+  };
+
+  const generateDeliveryZPL = (linen, deliveryInfo) => {
+    const today = new Date().toISOString().split("T")[0];
+    const qrCode = linen.epc.slice(-8); // Last 8 characters of EPC as QR code
+
+    return `^XA
+^FO100,30^A0N,35,35^FD${deliveryInfo.customerName || "CUSTOMER"}^FS
+^FO100,70^A0N,28,28^FDDELIVERY LABEL^FS
+^FO100,105^A0N,20,20^FDDelivery: ${deliveryInfo.driverName}^FS
+^FO100,130^A0N,20,20^FDPlate: ${deliveryInfo.plateNumber}^FS
+
+^FO150,160^BQN,2,5^FDQA,${qrCode}^FS
+
+^FO450,160^A0N,18,18^FDType: ${linen.linenTypeName || "Linen"}^FS
+^FO450,185^A0N,18,18^FDRoom: ${linen.roomName || "-"}^FS
+^FO450,210^A0N,18,18^FDDate: ${today}^FS
+^FO450,235^A0N,16,16^FDStatus: DELIVERED^FS
+
+^FO250,270^A0N,16,16^FDRFID Tag:^FS
+^FO250,290^A0N,14,14^FD${linen.epc}^FS
+^XZ`;
+  };
+
+  const printDeliveryLabel = async (linen) => {
+    setPrinterStatus("printing");
+    setPrintError(null);
+
+    try {
+      const deliveryInfo = {
+        customerName: formData.customerName,
+        driverName: formData.driverName,
+        plateNumber: formData.plateNumber,
+      };
+
+      const zplCode = generateDeliveryZPL(linen, deliveryInfo);
+
+      // Try BrowserPrint first if available
+      if (selectedDevice && selectedDevice.send) {
+        console.log("Trying BrowserPrint with device:", selectedDevice);
+
+        selectedDevice.send(
+          zplCode,
+          () => {
+            console.log("BrowserPrint success!");
+            setPrinterStatus("success");
+            setLastPrintTime(new Date());
+            setPrinterMessage("Label printed successfully!");
+            setTimeout(() => setPrinterStatus("idle"), 3000);
+            setShowPrintModal(false);
+          },
+          (error) => {
+            console.error("BrowserPrint error:", error);
+            setPrintError(error);
+            setPrinterStatus("error");
+            setPrinterMessage("Print error: " + error);
+            setTimeout(() => setPrinterStatus("idle"), 3000);
+          }
+        );
+        return;
+      }
+
+      // Fallback to original printerAPI method
+      console.log("Using fallback printerAPI method");
+      if (window.printerAPI) {
+        const success = await window.printerAPI.printLabel({
+          zpl: zplCode,
+          printer: {
+            connectionType: "usb",
+            printerName: "ZDesigner ZD888-203dpi ZPL (Copy 1)",
+            darkness: 10,
+            printSpeed: 4,
+            labelWidth: 4,
+            labelHeight: 2,
+          },
+        });
+
+        if (success) {
+          setPrinterStatus("success");
+          setLastPrintTime(new Date());
+          setPrinterMessage("Label printed successfully via fallback method!");
+          setShowPrintModal(false);
+        } else {
+          throw new Error("Print failed");
+        }
+      } else {
+        throw new Error("No printing method available");
+      }
+    } catch (err) {
+      console.error("Print error:", err);
+      setPrintError(err.message);
+      setPrinterStatus("error");
+      setPrinterMessage("Print error: " + err.message);
+    } finally {
+      setTimeout(() => setPrinterStatus("idle"), 3000);
+    }
+  };
+
+  const openPrintModal = (linen) => {
+    setSelectedLinenForPrint(linen);
+    setShowPrintModal(true);
+    if (printerStatus === "loading") {
+      setupZebraPrinter();
     }
   };
 
@@ -321,6 +539,8 @@ const DeliveryPage = ({ rfidHook }) => {
 
   useEffect(() => {
     fetchCustomers();
+    // Initialize printer setup
+    setupZebraPrinter();
   }, []);
 
   useEffect(() => {
@@ -794,6 +1014,9 @@ const DeliveryPage = ({ rfidHook }) => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Customer Info
                     </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -867,6 +1090,20 @@ const DeliveryPage = ({ rfidHook }) => {
                           <div className="text-xs text-gray-400">-</div>
                         )}
                       </td>
+                      <td className="px-4 py-3 border-b">
+                        {linen.epc && linen.isValidCustomer !== false ? (
+                          <button
+                            onClick={() => openPrintModal(linen)}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm flex items-center gap-1 transition-colors"
+                            title="Print delivery label"
+                          >
+                            <Printer size={14} />
+                            Print
+                          </button>
+                        ) : (
+                          <div className="text-xs text-gray-400">-</div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -908,6 +1145,121 @@ const DeliveryPage = ({ rfidHook }) => {
           </div>
         </div>
       </div>
+
+      {/* Print Modal */}
+      {showPrintModal && selectedLinenForPrint && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Print Delivery Label</h3>
+              <button
+                onClick={() => setShowPrintModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Printer Status */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">Printer Status:</span>
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      browserPrintStatus.includes("successfully")
+                        ? "bg-green-100 text-green-800"
+                        : browserPrintStatus.includes("Error")
+                        ? "bg-red-100 text-red-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
+                    {browserPrintStatus}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-600">{printerMessage}</div>
+              </div>
+            </div>
+
+            {/* Label Preview */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium mb-2">Label Preview:</h4>
+              <div className="border border-gray-200 rounded p-3 bg-gray-50 text-xs">
+                <div className="space-y-1">
+                  <div>
+                    <strong>Customer:</strong> {formData.customerName || "-"}
+                  </div>
+                  <div>
+                    <strong>Driver:</strong> {formData.driverName || "-"}
+                  </div>
+                  <div>
+                    <strong>Plate:</strong> {formData.plateNumber || "-"}
+                  </div>
+                  <div>
+                    <strong>Linen Type:</strong>{" "}
+                    {selectedLinenForPrint.linenTypeName || "-"}
+                  </div>
+                  <div>
+                    <strong>Room:</strong>{" "}
+                    {selectedLinenForPrint.roomName || "-"}
+                  </div>
+                  <div>
+                    <strong>EPC:</strong> {selectedLinenForPrint.epc}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Messages */}
+            {printError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md flex items-center">
+                <AlertCircle className="mr-2" size={16} />
+                {printError}
+              </div>
+            )}
+
+            {lastPrintTime && printerStatus === "success" && (
+              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-md flex items-center">
+                <CheckCircle className="mr-2" size={16} />
+                Label printed successfully at{" "}
+                {lastPrintTime.toLocaleTimeString()}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => printDeliveryLabel(selectedLinenForPrint)}
+                disabled={printerStatus === "printing"}
+                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors flex items-center justify-center gap-2 ${
+                  printerStatus === "printing"
+                    ? "bg-gray-400 cursor-not-allowed text-white"
+                    : printerStatus === "success"
+                    ? "bg-green-500 text-white"
+                    : printerStatus === "error"
+                    ? "bg-red-500 text-white"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                <Printer size={16} />
+                {printerStatus === "printing"
+                  ? "Printing..."
+                  : printerStatus === "success"
+                  ? "Printed!"
+                  : printerStatus === "error"
+                  ? "Print Failed"
+                  : "Print Label"}
+              </button>
+              <button
+                onClick={() => setShowPrintModal(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

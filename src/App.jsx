@@ -41,7 +41,7 @@ const App = () => {
       case "delivery":
         return <DeliveryPage rfidHook={rfidHook} />;
       case "print-test":
-        return <Print />;
+        return <PrintTestPage />;
       default:
         return <LinenCleanPage rfidHook={rfidHook} />;
     }

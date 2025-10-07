@@ -13,23 +13,22 @@ const PrintTestPage = () => {
   const [error, setError] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [devices, setDevices] = useState([]);
-  const [status, setStatus] = useState('Loading...');
-  const [browserPrintStatus, setBrowserPrintStatus] = useState('Checking...');
+  const [status, setStatus] = useState("Loading...");
+  const [browserPrintStatus, setBrowserPrintStatus] = useState("Checking...");
   const [labelData, setLabelData] = useState({
-    qrCode: "LN001",
-    linenType: "Bed Sheet",
-    hotelName: "Hotel Example",
+    qrCode: "123456789",
+    customerName: "PT JALIN MITRA NUSANTARA",
     roomNumber: "101",
-    dateProcessed: new Date().toISOString().split("T")[0],
-    rfidTag: "E2003412018A7B1D3B5C9E2F0",
+    totalLinen: "10",
+    qtyLinen: "5",
   });
   const [printerSettings, setPrinterSettings] = useState({
     connectionType: "usb",
     printerName: "ZDesigner ZD888-203dpi ZPL (Copy 1)", // Default printer name
     darkness: 10,
     printSpeed: 4,
-    labelWidth: 4,
-    labelHeight: 2,
+    labelWidth: 10,
+    labelHeight: 5,
   });
   const iframeRef = useRef(null);
 
@@ -38,57 +37,129 @@ const PrintTestPage = () => {
     setupZebraPrinter();
   }, []);
 
-  const setupZebraPrinter = async () => {
+  const setupZebraPrinter = () => {
     // Check if BrowserPrint is loaded
     if (!window.BrowserPrint) {
-      setBrowserPrintStatus('Error: Zebra Browser Print not loaded');
-      setStatus('Zebra Browser Print not available. Using fallback method.');
+      setBrowserPrintStatus("Error: Zebra Browser Print not loaded");
+      setStatus(
+        "Zebra Browser Print not available. Please install Zebra Browser Print."
+      );
       setPrinterStatus("idle");
       return;
     }
 
-    setBrowserPrintStatus('BrowserPrint loaded successfully');
+    setBrowserPrintStatus("BrowserPrint loaded successfully");
 
-    try {
-      // Get default printer device
-      const device = await window.zebraAPI.getDefaultDevice("printer");
-
-      if (device) {
-        setSelectedDevice(device);
-        setDevices([device]);
-        setStatus('Printer connected: ' + device.name);
-        setPrinterStatus("idle");
-        console.log('Default device found:', device);
-      } else {
-        setStatus('No default printer found. Searching for devices...');
-      }
-
-      // Discover other available devices
-      const deviceList = await window.zebraAPI.getLocalDevices("printer");
-      console.log('Device list:', deviceList);
-
-      if (deviceList && deviceList.length > 0) {
-        const allDevices = device ? [device] : [];
-        deviceList.forEach((dev) => {
-          if (!device || dev.uid !== device.uid) {
-            allDevices.push(dev);
-          }
-        });
-        setDevices(allDevices);
-        if (allDevices.length > 0 && !selectedDevice) {
-          setSelectedDevice(allDevices[0]);
-          setStatus('Printer found: ' + allDevices[0].name);
+    // Get default printer device
+    window.BrowserPrint.getDefaultDevice(
+      "printer",
+      (device) => {
+        if (device) {
+          setSelectedDevice(device);
+          setDevices([device]);
+          setStatus("Printer connected: " + device.name);
+          setPrinterStatus("idle");
+          console.log("Default device found:", device);
+        } else {
+          setStatus("No default printer found. Searching for devices...");
         }
-        setPrinterStatus("idle");
-      } else {
-        setStatus('No Zebra printers found via BrowserPrint. Using fallback method.');
-        setPrinterStatus("idle");
+
+        // Discover other available devices
+        window.BrowserPrint.getLocalDevices(
+          (deviceList) => {
+            console.log("Device list:", deviceList);
+            if (deviceList && deviceList.length > 0) {
+              const allDevices = device ? [device] : [];
+              deviceList.forEach((dev) => {
+                if (!device || dev.uid !== device.uid) {
+                  allDevices.push(dev);
+                }
+              });
+              setDevices(allDevices);
+              if (allDevices.length > 0 && !selectedDevice) {
+                setSelectedDevice(allDevices[0]);
+                setStatus("Printer found: " + allDevices[0].name);
+              }
+              setPrinterStatus("idle");
+            } else {
+              setStatus(
+                "No Zebra printers found. Please check printer connection."
+              );
+              setPrinterStatus("idle");
+            }
+          },
+          (error) => {
+            setStatus("Error getting local devices: " + error);
+            setPrinterStatus("idle");
+            console.error("Error getting local devices:", error);
+          },
+          "printer"
+        );
+      },
+      (error) => {
+        setStatus("Error getting default device: " + error);
+        console.error("Error getting default device:", error);
+
+        // Try to get local devices anyway
+        window.BrowserPrint.getLocalDevices(
+          (deviceList) => {
+            console.log("Fallback - Device list:", deviceList);
+            if (deviceList && deviceList.length > 0) {
+              setDevices(deviceList);
+              setSelectedDevice(deviceList[0]);
+              setStatus("Printer found: " + deviceList[0].name);
+              setPrinterStatus("idle");
+            } else {
+              setStatus("No Zebra printers detected");
+              setPrinterStatus("idle");
+            }
+          },
+          (error) => {
+            setStatus("Error: No printers found - " + error);
+            setPrinterStatus("idle");
+            console.error("Error in fallback:", error);
+          },
+          "printer"
+        );
       }
-    } catch (error) {
-      setStatus('Error: ' + error.message);
-      setPrinterStatus("idle");
-      console.error("Error setting up Zebra printer:", error);
-    }
+    );
+  };
+
+  const generateZPL = (data) => {
+    const deliveryData = {
+      barcode: data.qrCode || "123456789",
+      client: data.customerName || "PT JALIN MITRA NUSANTARA",
+      room: data.roomNumber || "101",
+      totalLinen: data.totalLinen || "10",
+      qtyLinen: data.qtyLinen || "5"
+    };
+
+    return `^LL550
+^FO180,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
+^FO310,60^A0N,28,28^FD(Obsesiman)^FS
+
+^FO310,95^A0N,35,35^FDDELIVERY^FS
+
+^FO200,150^BY2^BCN,80,Y,N,N^FD${deliveryData.barcode}^FS
+
+^FO150,270^A0N,25,25^FDDetail Pengiriman:^FS
+^FO150,305^GB400,0,2^FS
+
+^FO150,330^A0N,22,22^FDKlien:^FS
+^FO300,330^A0N,22,22^FD${deliveryData.client}^FS
+
+^FO150,365^A0N,22,22^FDRuangan:^FS
+^FO300,365^A0N,22,22^FD${deliveryData.room}^FS
+
+^FO150,400^A0N,22,22^FDTotal Linen:^FS
+^FO300,400^A0N,22,22^FD${deliveryData.totalLinen}^FS
+
+^FO150,435^A0N,22,22^FDQty Linen:^FS
+^FO300,435^A0N,22,22^FD${deliveryData.qtyLinen}^FS
+
+^FO150,470^GB400,0,2^FS
+^FO250,490^A0N,20,20^FDTerima kasih^FS
+^XZ`;
   };
 
   const printLabel = async () => {
@@ -98,27 +169,38 @@ const PrintTestPage = () => {
     try {
       const zplCode = generateZPL(labelData);
 
-      // Try BrowserPrint first
-      if (selectedDevice && window.zebraAPI) {
-        try {
-          await window.zebraAPI.sendToDevice(selectedDevice, zplCode);
-          setPrinterStatus("success");
-          setLastPrintTime(new Date());
-          setStatus('Print successful via BrowserPrint!');
-          return;
-        } catch (browserPrintError) {
-          console.warn('BrowserPrint failed, trying fallback:', browserPrintError);
-        }
+      // Try BrowserPrint first if available
+      if (selectedDevice && selectedDevice.send) {
+        console.log("Trying BrowserPrint with device:", selectedDevice);
+
+        selectedDevice.send(
+          zplCode,
+          () => {
+            console.log("BrowserPrint success!");
+            setPrinterStatus("success");
+            setLastPrintTime(new Date());
+            setStatus("Print successful via BrowserPrint!");
+            setTimeout(() => setPrinterStatus("idle"), 3000);
+          },
+          (error) => {
+            console.error("BrowserPrint error:", error);
+            setError(error);
+            setPrinterStatus("error");
+            setStatus("Print error via BrowserPrint: " + error);
+            setTimeout(() => setPrinterStatus("idle"), 3000);
+          }
+        );
+        return;
       }
 
-      // Fallback to original printerAPI
+      // Fallback to original printerAPI method
+      console.log("Using fallback printerAPI method");
       if (window.printerAPI) {
         const success = await window.printerAPI.printLabel({
           zpl: zplCode,
           printer: {
             connectionType: printerSettings.connectionType,
             printerName: printerSettings.printerName,
-            // Note: printer package doesn't use these settings for USB printing
             darkness: printerSettings.darkness,
             printSpeed: printerSettings.printSpeed,
             labelWidth: printerSettings.labelWidth,
@@ -129,59 +211,18 @@ const PrintTestPage = () => {
         if (success) {
           setPrinterStatus("success");
           setLastPrintTime(new Date());
-          setStatus('Print successful via fallback method!');
+          setStatus("Print successful via fallback method!");
         } else {
           throw new Error("Print failed");
         }
       } else {
-        // Final fallback untuk browser - gunakan window.print()
-        const printWindow = window.open("", "_blank");
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Print Label</title>
-              <style>
-                body {
-                  font-family: monospace;
-                  white-space: pre;
-                  padding: 20px;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  min-height: 100vh;
-                  margin: 0;
-                }
-                .label {
-                  border: 2px solid #333;
-                  padding: 20px;
-                  width: 300px;
-                  height: 150px;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="label">
-                <div><strong>QR Code:</strong> ${labelData.qrCode}</div>
-                <div><strong>Type:</strong> ${labelData.linenType}</div>
-                <div><strong>Hotel:</strong> ${labelData.hotelName}</div>
-                <div><strong>Room:</strong> ${labelData.roomNumber}</div>
-                <div><strong>Date:</strong> ${labelData.dateProcessed}</div>
-                <div><strong>RFID:</strong> ${labelData.rfidTag}</div>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-        printWindow.close();
-
-        setPrinterStatus("success");
-        setLastPrintTime(new Date());
+        throw new Error("No printing method available");
       }
     } catch (err) {
+      console.error("Print error:", err);
       setError(err.message);
       setPrinterStatus("error");
-      setStatus('Print error: ' + err.message);
+      setStatus("Print error: " + err.message);
     } finally {
       setTimeout(() => setPrinterStatus("idle"), 3000);
     }
@@ -212,36 +253,80 @@ const PrintTestPage = () => {
                 background: white;
                 border: 2px solid #ddd;
                 padding: 20px;
-                width: 300px;
+                width: 400px;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                text-align: center;
               }
-              .qr-placeholder {
-                width: 80px;
-                height: 80px;
+              .company-name { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+              .company-subtitle { font-size: 16px; color: #666; margin-bottom: 10px; }
+              .delivery-title { font-size: 28px; font-weight: bold; margin: 15px 0; }
+              .barcode-placeholder {
+                width: 120px;
+                height: 60px;
                 border: 2px solid #333;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 10px;
                 text-align: center;
-                margin-bottom: 10px;
+                margin: 20px auto;
+                background: #f0f0f0;
               }
-              .field { margin: 5px 0; }
-              .label-type { font-size: 18px; font-weight: bold; }
-              .hotel-name { font-size: 14px; }
-              .room-info { font-size: 12px; color: #666; }
-              .date-info { font-size: 12px; color: #888; }
-              .rfid-info { font-size: 8px; color: #999; margin-top: 20px; }
+              .detail-section {
+                text-align: left;
+                margin: 20px 0;
+                border-top: 2px solid #333;
+                padding-top: 15px;
+              }
+              .detail-row {
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+                font-size: 14px;
+              }
+              .detail-label { font-weight: bold; }
+              .divider {
+                border-top: 2px solid #333;
+                margin: 15px 0;
+              }
+              .thank-you {
+                font-size: 16px;
+                font-style: italic;
+                color: #666;
+              }
             </style>
           </head>
           <body>
             <div class="label">
-              <div class="qr-placeholder">QR Code<br/>${labelData.qrCode}</div>
-              <div class="field label-type">${labelData.linenType}</div>
-              <div class="field hotel-name">${labelData.hotelName}</div>
-              <div class="field room-info">Room: ${labelData.roomNumber}</div>
-              <div class="field date-info">${labelData.dateProcessed}</div>
-              <div class="field rfid-info">RFID: ${labelData.rfidTag}</div>
+              <div class="company-name">PT JALIN MITRA NUSANTARA</div>
+              <div class="company-subtitle">(Obsesiman)</div>
+              <div class="delivery-title">DELIVERY</div>
+
+              <div class="barcode-placeholder">
+                BARCODE<br/>${labelData.qrCode}
+              </div>
+
+              <div class="detail-section">
+                <div class="detail-row">
+                  <span class="detail-label">Klien:</span>
+                  <span>${labelData.customerName}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Ruangan:</span>
+                  <span>${labelData.roomNumber}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Total Linen:</span>
+                  <span>${labelData.totalLinen}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Qty Linen:</span>
+                  <span>${labelData.qtyLinen}</span>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+              <div class="thank-you">Terima kasih</div>
             </div>
           </body>
         </html>
@@ -252,31 +337,33 @@ const PrintTestPage = () => {
 
   const handleDeviceChange = (e) => {
     const selectedUid = e.target.value;
-    const device = devices.find(d => d.uid === selectedUid);
+    const device = devices.find((d) => d.uid === selectedUid);
     if (device) {
       setSelectedDevice(device);
-      setStatus('Printer selected: ' + device.name);
+      setStatus("Printer selected: " + device.name);
     }
   };
 
   const checkBrowserPrint = () => {
     if (!window.BrowserPrint) {
-      alert('Zebra Browser Print NOT loaded!');
+      alert("Zebra Browser Print NOT loaded!");
       return;
     }
 
     window.BrowserPrint.getApplicationConfiguration(
       (config) => {
-        alert('Zebra Browser Print Version: ' + JSON.stringify(config, null, 2));
+        alert(
+          "Zebra Browser Print Version: " + JSON.stringify(config, null, 2)
+        );
       },
       (error) => {
-        alert('Error getting config: ' + error);
+        alert("Error getting config: " + error);
       }
     );
   };
 
   const refreshDevices = () => {
-    setStatus('Refreshing devices...');
+    setStatus("Refreshing devices...");
     setupZebraPrinter();
   };
 
@@ -296,19 +383,25 @@ const PrintTestPage = () => {
         <h2 className="text-lg font-semibold mb-2">BrowserPrint Status</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <span className="text-sm font-medium text-gray-700">BrowserPrint:</span>
-            <span className={`ml-2 px-2 py-1 rounded text-sm ${
-              browserPrintStatus.includes('successfully')
-                ? 'bg-green-100 text-green-800'
-                : browserPrintStatus.includes('Error')
-                ? 'bg-red-100 text-red-800'
-                : 'bg-yellow-100 text-yellow-800'
-            }`}>
+            <span className="text-sm font-medium text-gray-700">
+              BrowserPrint:
+            </span>
+            <span
+              className={`ml-2 px-2 py-1 rounded text-sm ${
+                browserPrintStatus.includes("successfully")
+                  ? "bg-green-100 text-green-800"
+                  : browserPrintStatus.includes("Error")
+                  ? "bg-red-100 text-red-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}
+            >
               {browserPrintStatus}
             </span>
           </div>
           <div>
-            <span className="text-sm font-medium text-gray-700">Printer Status:</span>
+            <span className="text-sm font-medium text-gray-700">
+              Printer Status:
+            </span>
             <span className="ml-2 text-sm text-gray-600">{status}</span>
           </div>
         </div>
@@ -338,7 +431,7 @@ const PrintTestPage = () => {
             </label>
             <select
               onChange={handleDeviceChange}
-              value={selectedDevice?.uid || ''}
+              value={selectedDevice?.uid || ""}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {devices.map((device, index) => (
@@ -349,7 +442,7 @@ const PrintTestPage = () => {
             </select>
           </div>
           <div className="text-sm text-gray-600">
-            Selected: <strong>{selectedDevice?.name || 'None'}</strong>
+            Selected: <strong>{selectedDevice?.name || "None"}</strong>
           </div>
         </div>
       )}
@@ -364,7 +457,7 @@ const PrintTestPage = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                QR Code
+                Barcode
               </label>
               <input
                 type="text"
@@ -377,26 +470,13 @@ const PrintTestPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Linen Type
+                Customer Name
               </label>
               <input
                 type="text"
-                value={labelData.linenType}
+                value={labelData.customerName}
                 onChange={(e) =>
-                  setLabelData({ ...labelData, linenType: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Hotel Name
-              </label>
-              <input
-                type="text"
-                value={labelData.hotelName}
-                onChange={(e) =>
-                  setLabelData({ ...labelData, hotelName: e.target.value })
+                  setLabelData({ ...labelData, customerName: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -416,13 +496,26 @@ const PrintTestPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                RFID Tag
+                Total Linen
               </label>
               <input
                 type="text"
-                value={labelData.rfidTag}
+                value={labelData.totalLinen}
                 onChange={(e) =>
-                  setLabelData({ ...labelData, rfidTag: e.target.value })
+                  setLabelData({ ...labelData, totalLinen: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Qty Linen
+              </label>
+              <input
+                type="text"
+                value={labelData.qtyLinen}
+                onChange={(e) =>
+                  setLabelData({ ...labelData, qtyLinen: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
