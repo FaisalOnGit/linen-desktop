@@ -98,6 +98,16 @@ export const useRfid = () => {
           } else {
             log("⚠️ No valid config found, using defaults");
           }
+
+          // Load power settings
+          const powerSettings = await window.electronAPI.getPowerSettings();
+          if (powerSettings) {
+            log(`⚡ Power settings loaded: ${JSON.stringify(powerSettings)}`);
+            // Store power settings for use in components
+            if (typeof window !== "undefined") {
+              window.powerSettings = powerSettings;
+            }
+          }
         } else {
           log("⚠️ Electron API not available, using default config");
         }
@@ -197,6 +207,10 @@ export const useRfid = () => {
       });
       log("✅ Connected: " + JSON.stringify(res));
       setConnectionStatus({ connected: true, connecting: false, error: null });
+
+      // Auto-apply saved power settings after successful connection
+      await applySavedPowerSettings();
+
       return true;
     } catch (err) {
       log("❌ Connect Error: " + err.message);
@@ -206,6 +220,38 @@ export const useRfid = () => {
         error: err.message,
       });
       return false;
+    }
+  };
+
+  const applySavedPowerSettings = async () => {
+    try {
+      if (typeof window !== "undefined" && window.powerSettings) {
+        const { powerSettings, antennaEnabled } = window.powerSettings;
+
+        log("⚡ Applying saved power settings...");
+
+        // Apply power settings for enabled antennas
+        for (let antennaId = 1; antennaId <= 4; antennaId++) {
+          if (antennaEnabled[antennaId.toString()]) {
+            const power = powerSettings[antennaId.toString()];
+            const scaledPower = parseInt(power) * 10; // Convert to 0.1 dBm
+
+            try {
+              await setPowerLevel(antennaId, scaledPower);
+              log(`⚡ Antenna ${antennaId}: Power set to ${power} dBm`);
+
+              // Small delay between antenna settings to avoid overwhelming the reader
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (err) {
+              log(`❌ Failed to set power for antenna ${antennaId}: ${err.message}`);
+            }
+          }
+        }
+
+        log("✅ Power settings application completed");
+      }
+    } catch (err) {
+      log("❌ Error applying power settings: " + err.message);
     }
   };
 
@@ -340,6 +386,27 @@ export const useRfid = () => {
     }
   };
 
+  const getPowerLevel = async (antennaId) => {
+    if (!isRfidAvailable) {
+      log("❌ RFID API not available");
+      return;
+    }
+
+    try {
+      // Convert antennaId to integer to ensure it's sent as ushort
+      const antennaIdInt = parseInt(antennaId);
+
+      const res = await window.rfidAPI.getPower({
+        antennaId: antennaIdInt,
+      });
+      log(`📊 Get Power Result: ` + JSON.stringify(res));
+      return res;
+    } catch (err) {
+      log("❌ GetPower Error: " + err.message);
+      return null;
+    }
+  };
+
   // ==================
   // Register
   // ==================
@@ -364,8 +431,9 @@ export const useRfid = () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
           // Filter out duplicate EPCs to prevent false readings
-          const uniqueTags = tagsData.filter((tag, index, self) =>
-            index === self.findIndex((t) => t.EPC === tag.EPC)
+          const uniqueTags = tagsData.filter(
+            (tag, index, self) =>
+              index === self.findIndex((t) => t.EPC === tag.EPC)
           );
           setRegisterTags(uniqueTags);
         } catch (err) {
@@ -670,6 +738,7 @@ export const useRfid = () => {
     clearTags,
     getStatus,
     setPowerLevel,
+    getPowerLevel,
     startRegister,
     stopRegister,
     startGrouping,

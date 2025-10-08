@@ -9,7 +9,7 @@ const {
 const path = require("path");
 const fs = require("fs");
 const { Worker } = require("worker_threads");
-const { loadConfig, saveConfig } = require("./config");
+const { loadConfig, saveConfig, savePowerSettings, getPowerSettings } = require("./config");
 const { exec } = require("child_process");
 const util = require("util");
 const execPromise = util.promisify(exec);
@@ -87,7 +87,8 @@ let connect,
   disconnect,
   getTags,
   clearTags,
-  setPower;
+  setPower,
+  getPower;
 
 function initializeRfidFunctions() {
   try {
@@ -142,6 +143,13 @@ function initializeRfidFunctions() {
       assemblyFile: dllPath,
       typeName: "ZebraLib.RfidWrapper",
       methodName: "SetPower",
+      sync: false,
+    });
+
+    getPower = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "GetPower",
       sync: false,
     });
 
@@ -229,6 +237,15 @@ ipcMain.handle("get-config", () => {
 ipcMain.handle("save-config", (event, config) => {
   saveConfig(config);
   return true;
+});
+
+ipcMain.handle("save-power-settings", (event, { powerSettings, antennaEnabled }) => {
+  savePowerSettings(powerSettings, antennaEnabled);
+  return true;
+});
+
+ipcMain.handle("get-power-settings", () => {
+  return getPowerSettings();
 });
 
 ipcMain.handle("rfid-connect", async (event, config) => {
@@ -401,6 +418,30 @@ ipcMain.handle("rfid-set-power", async (event, { antennaId = 1, power }) => {
       }
 
       console.log("RFID SetPower Result:", res);
+      resolve(res);
+    });
+  });
+});
+
+ipcMain.handle("rfid-get-power", async (event, { antennaId }) => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
+  return new Promise((resolve, reject) => {
+    if (!isConnected) {
+      reject(new Error("Not connected to RFID reader"));
+      return;
+    }
+
+    getPower({ antennaId }, (err, res) => {
+      if (err) {
+        console.error("RFID GetPower Error:", err);
+        reject(err);
+        return;
+      }
+
+      console.log("RFID GetPower Result:", res);
       resolve(res);
     });
   });

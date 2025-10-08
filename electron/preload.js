@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openFolder: (filePath) => ipcRenderer.send("open-folder", filePath),
   getConfig: () => ipcRenderer.invoke("get-config"),
   saveConfig: (config) => ipcRenderer.invoke("save-config", config),
+  savePowerSettings: (powerSettings, antennaEnabled) =>
+    ipcRenderer.invoke("save-power-settings", { powerSettings, antennaEnabled }),
+  getPowerSettings: () => ipcRenderer.invoke("get-power-settings"),
 });
 
 // Add RFID API
@@ -21,6 +24,7 @@ contextBridge.exposeInMainWorld("rfidAPI", {
   getTags: () => ipcRenderer.invoke("rfid-get-tags"),
   clearTags: () => ipcRenderer.invoke("rfid-clear-tags"),
   setPower: (config) => ipcRenderer.invoke("rfid-set-power", config),
+  getPower: (config) => ipcRenderer.invoke("rfid-get-power", config),
   getStatus: () => ipcRenderer.invoke("rfid-status"),
   onInventoryStarted: (callback) =>
     ipcRenderer.on("rfid-inventory-started", callback),
@@ -65,7 +69,8 @@ contextBridge.exposeInMainWorld("printerAPI", {
   getPrinters: () => ipcRenderer.invoke("get-printers"),
 
   // Test printer connection
-  testConnection: (printerConfig) => ipcRenderer.invoke("test-printer-connection", printerConfig),
+  testConnection: (printerConfig) =>
+    ipcRenderer.invoke("test-printer-connection", printerConfig),
 });
 
 // Add Zebra BrowserPrint API
@@ -73,14 +78,14 @@ contextBridge.exposeInMainWorld("zebraAPI", {
   // Get default device
   getDefaultDevice: (type) => {
     return new Promise((resolve, reject) => {
-      if (typeof window !== 'undefined' && window.BrowserPrint) {
+      if (typeof window !== "undefined" && window.BrowserPrint) {
         window.BrowserPrint.getDefaultDevice(
           type,
           (device) => resolve(device),
           (error) => reject(error)
         );
       } else {
-        reject(new Error('BrowserPrint not available'));
+        reject(new Error("BrowserPrint not available"));
       }
     });
   },
@@ -88,14 +93,14 @@ contextBridge.exposeInMainWorld("zebraAPI", {
   // Get local devices
   getLocalDevices: (type) => {
     return new Promise((resolve, reject) => {
-      if (typeof window !== 'undefined' && window.BrowserPrint) {
+      if (typeof window !== "undefined" && window.BrowserPrint) {
         window.BrowserPrint.getLocalDevices(
           (devices) => resolve(devices),
           (error) => reject(error),
           type
         );
       } else {
-        reject(new Error('BrowserPrint not available'));
+        reject(new Error("BrowserPrint not available"));
       }
     });
   },
@@ -110,8 +115,8 @@ contextBridge.exposeInMainWorld("zebraAPI", {
           (error) => reject(error)
         );
       } else {
-        reject(new Error('Invalid device or send method not available'));
+        reject(new Error("Invalid device or send method not available"));
       }
     });
-  }
+  },
 });

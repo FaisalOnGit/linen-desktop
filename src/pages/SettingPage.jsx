@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Play,
   CircleStop,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import LogViewer from "../components/LogViewer";
 import { useTableMode } from "../contexts/TableModeContext";
+import toast from "react-hot-toast";
 
 const SettingPage = ({ rfidHook }) => {
   const {
@@ -21,6 +22,7 @@ const SettingPage = ({ rfidHook }) => {
     startInventory,
     stopInventory,
     setPowerLevel,
+    getPowerLevel,
     getStatus,
     logs,
     logRef,
@@ -43,22 +45,75 @@ const SettingPage = ({ rfidHook }) => {
     3: 15,
     4: 15,
   });
+  const [actualPowers, setActualPowers] = useState({
+    1: null,
+    2: null,
+    3: null,
+    4: null,
+  });
   const [isApplying, setIsApplying] = useState(false);
   const [isInventoryActive, setIsInventoryActive] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [powerConfigLoaded, setPowerConfigLoaded] = useState(false);
 
   const handleAntennaChange = (antennaId) => {
-    setAntennas((prev) => ({
-      ...prev,
-      [antennaId]: !prev[antennaId],
-    }));
+    const newAntennas = {
+      ...antennas,
+      [antennaId]: !antennas[antennaId],
+    };
+    setAntennas(newAntennas);
+
+    // Auto-save antenna settings when changed
+    if (powerConfigLoaded) {
+      savePowerSettingsToConfig(powers, newAntennas);
+    }
   };
 
   const handlePowerChange = (powerId, value) => {
-    setPowers((prev) => ({
-      ...prev,
+    const newPowers = {
+      ...powers,
       [powerId]: parseInt(value),
-    }));
+    };
+    setPowers(newPowers);
+
+    // Auto-save power settings when changed
+    if (powerConfigLoaded) {
+      savePowerSettingsToConfig(newPowers);
+    }
   };
+
+  // Save power settings to config
+  const savePowerSettingsToConfig = async (powerValues = powers, antennaValues = antennas) => {
+    try {
+      if (typeof window !== "undefined" && window.electronAPI) {
+        await window.electronAPI.savePowerSettings(powerValues, antennaValues);
+        console.log("⚡ Power settings saved to config");
+      }
+    } catch (err) {
+      console.error("Error saving power settings:", err);
+    }
+  };
+
+  // Load power settings from config on component mount
+  useEffect(() => {
+    const loadPowerSettings = async () => {
+      try {
+        if (typeof window !== "undefined" && window.electronAPI) {
+          const powerSettings = await window.electronAPI.getPowerSettings();
+          if (powerSettings) {
+            setPowers(powerSettings.powerSettings);
+            setAntennas(powerSettings.antennaEnabled);
+            setPowerConfigLoaded(true);
+            console.log("⚡ Power settings loaded from config");
+          }
+        }
+      } catch (err) {
+        console.error("Error loading power settings:", err);
+      }
+    };
+
+    loadPowerSettings();
+  }, []);
 
   const handleConnect = async () => {
     if (isConnected) {
@@ -85,7 +140,7 @@ const SettingPage = ({ rfidHook }) => {
     getStatus();
   };
 
-  const handleApplySettings = () => {
+  const handleApplySettings = async () => {
     Object.entries(powers).forEach(([antennaId, value]) => {
       if (antennas[antennaId]) {
         const scaledValue = parseInt(value) * 10; // convert ke 0.1 dBm
@@ -96,20 +151,70 @@ const SettingPage = ({ rfidHook }) => {
       }
     });
 
+    // Save current power settings to config
+    await savePowerSettingsToConfig();
+
     setIsApplying(true);
     setTimeout(() => {
       setIsApplying(false);
+      // Refresh actual power values after applying
+      refreshActualPowers();
+      toast.success("Power settings applied and saved!", {
+        duration: 3000,
+        icon: "✅",
+      });
     }, 2000);
   };
 
-  const PowerSlider = ({ id, label, value, onChange, enabled }) => {
+  const refreshActualPowers = async () => {
+    setIsRefreshing(true);
+    const newActualPowers = { ...actualPowers };
+
+    for (let antennaId = 1; antennaId <= 4; antennaId++) {
+      if (antennas[antennaId]) {
+        try {
+          const powerData = await getPowerLevel(antennaId);
+          if (powerData) {
+            newActualPowers[antennaId] =
+              powerData.powerDbm || powerData.power / 10.0;
+          }
+        } catch (err) {
+          console.error(`Failed to get power for antenna ${antennaId}:`, err);
+        }
+      } else {
+        newActualPowers[antennaId] = null;
+      }
+    }
+
+    setActualPowers(newActualPowers);
+    setIsRefreshing(false);
+  };
+
+  const PowerSlider = ({
+    id,
+    label,
+    value,
+    onChange,
+    enabled,
+    actualValue,
+  }) => {
     const percentage = (value / 30) * 100;
 
     return (
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-        </label>
+        <div className="flex justify-between items-center">
+          <label className="block text-sm font-medium text-gray-700">
+            {label}
+          </label>
+          {actualValue !== null && enabled && (
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-gray-500">Actual:</span>
+              <span className="text-xs font-medium px-2 py-1 bg-green-100 text-green-700 rounded">
+                {actualValue.toFixed(1)} dBm
+              </span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center space-x-4">
           <div className="relative flex-1">
             <input
@@ -303,11 +408,24 @@ const SettingPage = ({ rfidHook }) => {
               value={powers[powerId]}
               onChange={handlePowerChange}
               enabled={antennas[powerId]}
+              actualValue={actualPowers[powerId]}
             />
           ))}
         </div>
-        {/* Apply Button */}
-        <div className="flex justify-end mt-6">
+        {/* Apply and Refresh Buttons */}
+        <div className="flex justify-between items-center mt-6">
+          <button
+            onClick={refreshActualPowers}
+            disabled={!isConnected || isRefreshing}
+            className={`px-6 py-3 rounded-lg font-medium shadow-sm transition-all duration-200 flex items-center space-x-2 ${
+              !isConnected || isRefreshing
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-green-600 text-white hover:bg-green-700"
+            }`}
+          >
+            <Monitor size={16} />
+            <span>{isRefreshing ? "Reading..." : "Read Actual Power"}</span>
+          </button>
           <button
             onClick={handleApplySettings}
             disabled={isApplying}
