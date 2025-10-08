@@ -408,14 +408,14 @@ const RegisterPage = ({ rfidHook }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                RFID Register Description
+                Description
               </label>
               <textarea
                 name="rfidRegisterDescription"
                 value={formData.rfidRegisterDescription}
                 onChange={handleChange}
                 placeholder="Deskripsi registrasi RFID"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent h-[100px]"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent "
               ></textarea>
             </div>
           </div>
@@ -534,7 +534,7 @@ const RegisterPage = ({ rfidHook }) => {
                           <option value="">-- Pilih Linen --</option>
                           {linenOptions.map((linen) => (
                             <option key={linen.linenId} value={linen.linenId}>
-                              {linen.linenName} ({linen.linenTypeName})
+                              {linen.linenName} - ({linen.linenId})
                             </option>
                           ))}
                         </select>
