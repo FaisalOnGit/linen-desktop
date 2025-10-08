@@ -22,6 +22,7 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
     isConnected,
     isConnecting,
     connectionError,
+    clearTags,
   } = rfidHook || {};
 
   const handleConnect = async () => {
@@ -30,6 +31,30 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
     } else {
       await connect(ip, port);
     }
+  };
+
+  const handleNavigate = async (pageId) => {
+    // Clear RFID tags when switching tabs to prevent cross-contamination
+    if (clearTags) {
+      try {
+        await clearTags();
+        console.log(`🧹 Tags cleared when navigating to ${pageId}`);
+      } catch (err) {
+        console.error("Error clearing tags during navigation:", err);
+      }
+    }
+
+    // Also clear local tag states in the hook
+    if (rfidHook && rfidHook.clearTagStates) {
+      try {
+        rfidHook.clearTagStates();
+        console.log(`🧹 Local tag states cleared when navigating to ${pageId}`);
+      } catch (err) {
+        console.error("Error clearing local tag states during navigation:", err);
+      }
+    }
+
+    onNavigate(pageId);
   };
 
   const ribbonTabs = [
@@ -232,7 +257,7 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
                     return (
                       <button
                         key={command.id}
-                        onClick={() => onNavigate(command.id)}
+                        onClick={() => handleNavigate(command.id)}
                         className={`flex flex-col items-center p-2 rounded-md transition-colors min-w-[60px] group ${
                           isActive
                             ? "bg-blue-100 text-blue-600 shadow-sm"
@@ -250,7 +275,7 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
                     return (
                       <button
                         key={command.id}
-                        onClick={() => onNavigate(command.id)}
+                        onClick={() => handleNavigate(command.id)}
                         className={`flex items-center space-x-2 px-2 py-1 rounded transition-colors ${
                           isActive
                             ? "bg-blue-100 text-blue-600"

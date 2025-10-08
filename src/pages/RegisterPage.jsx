@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Play, Plus, Trash2, Square } from "lucide-react";
+import toast from "react-hot-toast";
 
 const RegisterPage = ({ rfidHook }) => {
   const {
@@ -166,42 +167,50 @@ const RegisterPage = ({ rfidHook }) => {
 
   useEffect(() => {
     if (registerTags && registerTags.length > 0) {
-      const latestTag = registerTags[registerTags.length - 1];
-      if (latestTag && latestTag.EPC && !processedTags.has(latestTag.EPC)) {
-        // Mark this EPC as processed
-        setProcessedTags((prev) => new Set([...prev, latestTag.EPC]));
-
-        // Check if EPC already exists in current linens
-        const existingIndex = linens.findIndex(
-          (linen) => linen.epc === latestTag.EPC
-        );
-
-        if (existingIndex === -1) {
-          // Add to valid EPCs set (RegisterPage menerima semua EPC)
-          setValidEpcs((prev) => new Set([...prev, latestTag.EPC]));
-
-          // EPC doesn't exist, find first empty row or add new row
-          const emptyRowIndex = linens.findIndex(
-            (linen) => linen.epc.trim() === ""
-          );
-
-          if (emptyRowIndex !== -1) {
-            // Fill empty row
-            handleLinenChange(emptyRowIndex, "epc", latestTag.EPC);
-          } else {
-            // No empty row found, add new row with EPC
-            setLinens((prev) => [
-              ...prev,
-              { linenId: "", epc: latestTag.EPC, roomId: "" },
-            ]);
+      // Process only new tags that haven't been processed
+      registerTags.forEach((tag) => {
+        if (tag && tag.EPC && !processedTags.has(tag.EPC)) {
+          // Validate EPC format (should be reasonable length and hex)
+          if (tag.EPC.length < 8 || !/^[0-9A-Fa-f]+$/.test(tag.EPC)) {
+            console.warn("Invalid EPC format:", tag.EPC);
+            return;
           }
-        } else {
-          // EPC already exists, just update it (in case of re-scan)
-          console.log(
-            `EPC ${latestTag.EPC} sudah ada di baris ${existingIndex + 1}`
+
+          // Mark this EPC as processed
+          setProcessedTags((prev) => new Set([...prev, tag.EPC]));
+
+          // Check if EPC already exists in current linens
+          const existingIndex = linens.findIndex(
+            (linen) => linen.epc === tag.EPC
           );
+
+          if (existingIndex === -1) {
+            // Add to valid EPCs set (RegisterPage menerima semua EPC)
+            setValidEpcs((prev) => new Set([...prev, tag.EPC]));
+
+            // EPC doesn't exist, find first empty row or add new row
+            const emptyRowIndex = linens.findIndex(
+              (linen) => linen.epc.trim() === ""
+            );
+
+            if (emptyRowIndex !== -1) {
+              // Fill empty row
+              handleLinenChange(emptyRowIndex, "epc", tag.EPC);
+            } else {
+              // No empty row found, add new row with EPC
+              setLinens((prev) => [
+                ...prev,
+                { linenId: "", epc: tag.EPC, roomId: "" },
+              ]);
+            }
+          } else {
+            // EPC already exists, just update it (in case of re-scan)
+            console.log(
+              `EPC ${tag.EPC} sudah ada di baris ${existingIndex + 1}`
+            );
+          }
         }
-      }
+      });
     }
   }, [registerTags]); // Simplified dependencies
 
@@ -329,16 +338,25 @@ const RegisterPage = ({ rfidHook }) => {
         stopRegister();
       }
 
-      alert("Registrasi RFID berhasil!");
+      toast.success("Registrasi RFID berhasil!", {
+        duration: 4000,
+        icon: "✅",
+      });
     } catch (error) {
       console.error("Error submit:", error);
-      alert("Gagal registrasi RFID, coba lagi!");
+      toast.error("Gagal registrasi RFID, coba lagi!", {
+        duration: 4000,
+        icon: "❌",
+      });
     }
   };
 
   const handleToggleScan = () => {
     if (!isRfidAvailable) {
-      alert("Device belum terkoneksi!");
+      toast.error("Device belum terkoneksi!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
       return;
     }
 

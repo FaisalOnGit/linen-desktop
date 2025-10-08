@@ -293,7 +293,12 @@ export const useRfid = () => {
       const res = await window.rfidAPI.clearTags();
       log("🧹 Clear Tags: " + JSON.stringify(res));
     } catch (err) {
-      log("❌ ClearTags Error: " + err.message);
+      // Don't log error if RFID is not initialized - this is expected on app start
+      if (err.message && err.message.includes("RFID not initialized")) {
+        console.log("ℹ️ RFID not initialized, skipping clearTags");
+      } else {
+        log("❌ ClearTags Error: " + err.message);
+      }
     }
   };
 
@@ -358,11 +363,15 @@ export const useRfid = () => {
       intervalRefs.current.register = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
-          setRegisterTags(tagsData);
+          // Filter out duplicate EPCs to prevent false readings
+          const uniqueTags = tagsData.filter((tag, index, self) =>
+            index === self.findIndex((t) => t.EPC === tag.EPC)
+          );
+          setRegisterTags(uniqueTags);
         } catch (err) {
           console.error("Error fetching register tags:", err);
         }
-      }, 500);
+      }, 1000); // Increased from 500ms to 1 second
     } catch (err) {
       console.error("Error starting register:", err);
     }
@@ -676,5 +685,14 @@ export const useRfid = () => {
     saveConfig,
     clearAllIntervals,
     clearAllData,
+    // Expose tag states for components to clear their local state
+    clearTagStates: () => {
+      setTags([]);
+      setRegisterTags([]);
+      setGroupingTags([]);
+      setSortingTags([]);
+      setDeliveryTags([]);
+      setLinenBersihTags([]);
+    },
   };
 };

@@ -11,6 +11,7 @@ import SortingLinenPage from "./pages/SortingPage";
 import PrintTestPage from "./pages/PrintTestPage";
 import { TableModeProvider } from "./contexts/TableModeContext";
 import Print from "./pages/Print";
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   const [activePage, setActivePage] = useState("login");
@@ -65,6 +66,36 @@ const App = () => {
             {renderActivePage()}
           </div>
         )}
+
+        {/* Toast Notification Container */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: "#363636",
+              color: "#fff",
+              fontSize: "14px",
+              fontWeight: "500",
+              borderRadius: "8px",
+              padding: "12px 16px",
+            },
+            success: {
+              duration: 4000,
+              iconTheme: {
+                primary: "#10b981",
+                secondary: "#fff",
+              },
+            },
+            error: {
+              duration: 4000,
+              iconTheme: {
+                primary: "#ef4444",
+                secondary: "#fff",
+              },
+            },
+          }}
+        />
       </div>
     </TableModeProvider>
   );

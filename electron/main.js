@@ -270,6 +270,13 @@ ipcMain.handle("rfid-start-inventory", async () => {
       return;
     }
 
+    // Clear tags before starting new inventory to prevent old tag contamination
+    clearTags(null, (clearErr, clearRes) => {
+      if (clearErr) {
+        console.error("Failed to clear tags before inventory:", clearErr);
+      }
+    });
+
     startInventory(null, (err, res) => {
       if (err) {
         console.error("RFID Start Error:", err);

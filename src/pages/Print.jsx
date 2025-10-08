@@ -9,7 +9,7 @@ function Print() {
     // Setup Zebra printer on component mount
     setupZebraPrinter();
   }, []);
-
+w
   const setupZebraPrinter = () => {
     // Check if BrowserPrint is loaded
     if (!window.BrowserPrint) {
