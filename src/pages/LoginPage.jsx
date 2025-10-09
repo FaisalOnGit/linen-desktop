@@ -75,7 +75,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       if (err.name === "TypeError" && err.message.includes("fetch")) {
         setError("Tidak dapat terhubung ke server. Periksa koneksi internet.");
       } else if (err.message.includes("HTTP error")) {
-        setError("Server error. Coba lagi nanti.");
+        setError("Login gagal. Cek kembali email dan password.");
       } else if (err.name === "SyntaxError") {
         setError("Response server tidak valid.");
       } else {

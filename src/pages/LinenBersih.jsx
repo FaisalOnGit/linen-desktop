@@ -660,14 +660,6 @@ const LinenCleanPage = ({ rfidHook }) => {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={addLinenRow}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
-                >
-                  <Plus size={14} />
-                  <span>Tambah Baris</span>
-                </button>
-                <button
-                  type="button"
                   onClick={clearAllEPCs}
                   className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
                 >
@@ -677,7 +669,7 @@ const LinenCleanPage = ({ rfidHook }) => {
               </div>
             </div>
 
-            <div className="mb-4 flex gap-4 flex-wrap">
+            <div className="mb-4">
               <button
                 type="button"
                 onClick={handleToggleScan}
@@ -702,50 +694,6 @@ const LinenCleanPage = ({ rfidHook }) => {
                   </>
                 )}
               </button>
-
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isLinenBersihActive
-                      ? "bg-green-500 animate-pulse"
-                      : "bg-gray-400"
-                  }`}
-                ></div>
-                <span className="text-sm text-gray-600">
-                  {isLinenBersihActive ? "Scanning..." : "Idle"}
-                </span>
-                {linenBersihTags.length > 0 && (
-                  <span className="text-xs text-blue-600">
-                    ({linenBersihTags.length} tags detected)
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 bg-blue-100 rounded-lg">
-                <span className="text-sm text-blue-700 font-medium">
-                  Total Rows: {linens.length}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 bg-green-100 rounded-lg">
-                <span className="text-sm text-green-700 font-medium">
-                  Valid EPCs:{" "}
-                  {
-                    linens.filter(
-                      (l) => l.epc.trim() && l.isValidCustomer !== false
-                    ).length
-                  }
-                </span>
-              </div>
-
-              {linens.filter((l) => l.isValidCustomer === false).length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-red-100 rounded-lg">
-                  <span className="text-sm text-red-700 font-medium">
-                    Invalid EPCs:{" "}
-                    {linens.filter((l) => l.isValidCustomer === false).length}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Warning message for invalid customers */}
@@ -778,9 +726,6 @@ const LinenCleanPage = ({ rfidHook }) => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Customer Info
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 border-b">
-                      Aksi
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -808,18 +753,15 @@ const LinenCleanPage = ({ rfidHook }) => {
                         <input
                           type="text"
                           value={linen.epc}
-                          onChange={(e) =>
-                            handleLinenChange(index, "epc", e.target.value)
-                          }
-                          placeholder="Auto-filled dari scan / manual input"
-                          className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent ${
+                          readOnly
+                          placeholder="Auto-filled dari scan RFID"
+                          className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
                             linen.isValidCustomer === false
                               ? "border-red-300 bg-red-50"
                               : linen.epc
                               ? "bg-green-50 border-green-300"
                               : "border-gray-300"
                           }`}
-                          readOnly={linen.epc && processedTags.has(linen.epc)}
                         />
                       </td>
                       <td className="px-4 py-3 border-b">
@@ -854,19 +796,7 @@ const LinenCleanPage = ({ rfidHook }) => {
                           <div className="text-xs text-gray-400">-</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center border-b">
-                        {linens.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeLinenRow(index)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Hapus baris"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                  </tr>
                   ))}
                 </tbody>
               </table>

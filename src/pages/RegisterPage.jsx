@@ -117,7 +117,7 @@ const RegisterPage = ({ rfidHook }) => {
     setLoadingLinens(true);
     try {
       const token = await window.authAPI.getToken();
-      const response = await fetch(`${baseUrl}/Master/linen`, {
+      const response = await fetch(`${baseUrl}/Master/linen-unregistered`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -429,14 +429,6 @@ const RegisterPage = ({ rfidHook }) => {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={addLinenRow}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
-                >
-                  <Plus size={14} />
-                  <span>Tambah Baris</span>
-                </button>
-                <button
-                  type="button"
                   onClick={clearAllEPCs}
                   className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
                 >
@@ -446,7 +438,7 @@ const RegisterPage = ({ rfidHook }) => {
               </div>
             </div>
 
-            <div className="mb-4 flex gap-4 flex-wrap">
+            <div className="mb-4">
               <button
                 type="button"
                 onClick={handleToggleScan}
@@ -471,18 +463,6 @@ const RegisterPage = ({ rfidHook }) => {
                   </>
                 )}
               </button>
-
-              <div className="flex items-center gap-2 px-3 py-2 bg-blue-100 rounded-lg">
-                <span className="text-sm text-blue-700 font-medium">
-                  Total Rows: {linens.length}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 bg-green-100 rounded-lg">
-                <span className="text-sm text-green-700 font-medium">
-                  Filled EPCs: {linens.filter((l) => l.epc.trim()).length}
-                </span>
-              </div>
             </div>
 
             {/* Table */}
@@ -501,9 +481,6 @@ const RegisterPage = ({ rfidHook }) => {
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Room ID
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 border-b">
-                      Aksi
                     </th>
                   </tr>
                 </thead>
@@ -543,14 +520,11 @@ const RegisterPage = ({ rfidHook }) => {
                         <input
                           type="text"
                           value={linen.epc}
-                          onChange={(e) =>
-                            handleLinenChange(index, "epc", e.target.value)
-                          }
-                          placeholder="Auto-filled dari scan / manual input"
-                          className={`w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent ${
+                          readOnly
+                          placeholder="Auto-filled dari scan RFID"
+                          className={`w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
                             linen.epc ? "bg-green-50 border-green-300" : ""
                           }`}
-                          readOnly={linen.epc && processedTags.has(linen.epc)}
                         />
                       </td>
                       <td className="px-4 py-3 border-b">
@@ -568,18 +542,6 @@ const RegisterPage = ({ rfidHook }) => {
                             </option>
                           ))}
                         </select>
-                      </td>
-                      <td className="px-4 py-3 text-center border-b">
-                        {linens.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeLinenRow(index)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Hapus baris"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
                       </td>
                     </tr>
                   ))}

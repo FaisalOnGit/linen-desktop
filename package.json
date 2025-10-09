@@ -33,8 +33,6 @@
     "keytar": "^7.9.0",
     "lucide-react": "^0.542.0",
     "music-metadata": "^7.14.0",
-    "node-thermal-printer": "^4.5.0",
-    "printer": "^0.4.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-hot-toast": "^2.6.0"
