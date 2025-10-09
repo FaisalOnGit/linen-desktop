@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Play, Plus, Trash2, Square } from "lucide-react";
+import Select from "react-select";
 
 const LinenCleanPage = ({ rfidHook }) => {
   const {
@@ -23,6 +24,7 @@ const LinenCleanPage = ({ rfidHook }) => {
   ]);
   const [processedTags, setProcessedTags] = useState(new Set());
   const [validEpcs, setValidEpcs] = useState(new Set());
+  const [nonExistentEpcs, setNonExistentEpcs] = useState(new Set());
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
   const fetchCustomers = async (searchTerm = "") => {
@@ -90,8 +92,14 @@ const LinenCleanPage = ({ rfidHook }) => {
     return [];
   };
 
-  const fetchLinenDataAndCheck = async (epc, index) => {
+  const checkEPCAndAddToTable = async (epc) => {
     if (!epc.trim()) return;
+
+    // Check if EPC has already been determined to not exist
+    if (nonExistentEpcs.has(epc)) {
+      console.log(`EPC ${epc} sudah dicek sebelumnya dan tidak ada di API, diabaikan`);
+      return;
+    }
 
     try {
       const token = await window.authAPI.getToken();
@@ -118,7 +126,109 @@ const LinenCleanPage = ({ rfidHook }) => {
           // Add to valid EPCs set
           setValidEpcs(prev => new Set([...prev, epc]));
 
-          // EPC found in API - keep the row with fetched data
+          // EPC exists in API - add it to the table
+          setLinens((prev) => {
+            const emptyRowIndex = prev.findIndex(
+              (linen) => linen.epc.trim() === ""
+            );
+
+            if (emptyRowIndex !== -1) {
+              // Use existing empty row
+              return prev.map((linen, i) =>
+                i === emptyRowIndex
+                  ? {
+                      ...linen,
+                      epc: linenData.epc,
+                      customerId: linenData.customerId,
+                      customerName: linenData.customerName,
+                      linenId: linenData.linenId,
+                      linenTypeName: linenData.linenTypeName,
+                      linenName: linenData.linenName,
+                      roomId: linenData.roomId,
+                      roomName: linenData.roomName,
+                      statusId: linenData.statusId,
+                      status: linenData.status,
+                      loading: false,
+                      isValidCustomer: isValidCustomer,
+                      errorMessage: !isValidCustomer
+                        ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                        : null,
+                    }
+                  : linen
+              );
+            } else {
+              // Create new row
+              return [
+                ...prev,
+                {
+                  epc: linenData.epc,
+                  customerId: linenData.customerId,
+                  customerName: linenData.customerName,
+                  linenId: linenData.linenId,
+                  linenTypeName: linenData.linenTypeName,
+                  linenName: linenData.linenName,
+                  roomId: linenData.roomId,
+                  roomName: linenData.roomName,
+                  statusId: linenData.statusId,
+                  status: linenData.status,
+                  status_id: linenData.statusId || 1,
+                  loading: false,
+                  isValidCustomer: isValidCustomer,
+                  errorMessage: !isValidCustomer
+                    ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                    : null,
+                },
+              ];
+            }
+          });
+        } else {
+          // EPC not found in API - add to cache but don't show in table
+          console.log(`EPC ${epc} tidak ditemukan di API, ditambahkan ke cache`);
+          setNonExistentEpcs(prev => new Set([...prev, epc]));
+        }
+      } else {
+        console.error("Failed to fetch linen data for EPC:", epc);
+        // Add to cache on API error
+        setNonExistentEpcs(prev => new Set([...prev, epc]));
+      }
+    } catch (error) {
+      console.error("Error fetching linen data:", error);
+      // Add to cache on error
+      setNonExistentEpcs(prev => new Set([...prev, epc]));
+    }
+  };
+
+  const fetchLinenDataAndCheck = async (epc, index) => {
+    if (!epc.trim()) return;
+
+    // This function is now mainly used for manual EPC input
+    // For RFID scanning, we use checkEPCAndAddToTable instead
+    try {
+      const token = await window.authAPI.getToken();
+      const response = await fetch(
+        `${baseUrl}/Process/linen_rfid?epc=${encodeURIComponent(epc)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data && result.data.length > 0) {
+          const linenData = result.data[0];
+
+          // Check if the linen belongs to the selected customer
+          const isValidCustomer =
+            !formData.customerId ||
+            linenData.customerId === formData.customerId;
+
+          // Add to valid EPCs set
+          setValidEpcs(prev => new Set([...prev, epc]));
+
+          // Update the specific linen row with fetched data
           setLinens((prev) =>
             prev.map((linen, i) =>
               i === index
@@ -144,8 +254,10 @@ const LinenCleanPage = ({ rfidHook }) => {
             )
           );
         } else {
-          // EPC not found in API - remove the row
-          console.log(`EPC ${epc} tidak ditemukan di API, menghapus baris`);
+          // EPC not found in API - add to cache and remove the row
+          console.log(`EPC ${epc} tidak ditemukan di API, menambahkan ke cache dan menghapus baris`);
+          setNonExistentEpcs(prev => new Set([...prev, epc]));
+
           setLinens((prev) => {
             const filtered = prev.filter((_, i) => i !== index);
             // Ensure at least one empty row remains
@@ -170,7 +282,9 @@ const LinenCleanPage = ({ rfidHook }) => {
         }
       } else {
         console.error("Failed to fetch linen data for EPC:", epc);
-        // Remove the row on API error as well
+        // Add to cache on API error and remove the row
+        setNonExistentEpcs(prev => new Set([...prev, epc]));
+
         setLinens((prev) => {
           const filtered = prev.filter((_, i) => i !== index);
           return filtered.length > 0
@@ -193,7 +307,9 @@ const LinenCleanPage = ({ rfidHook }) => {
       }
     } catch (error) {
       console.error("Error fetching linen data:", error);
-      // Remove the row on error as well
+      // Add to cache on error and remove the row
+      setNonExistentEpcs(prev => new Set([...prev, epc]));
+
       setLinens((prev) => {
         const filtered = prev.filter((_, i) => i !== index);
         return filtered.length > 0
@@ -362,33 +478,8 @@ const LinenCleanPage = ({ rfidHook }) => {
         );
 
         if (existingIndex === -1) {
-          const emptyRowIndex = linens.findIndex(
-            (linen) => linen.epc.trim() === ""
-          );
-
-          if (emptyRowIndex !== -1) {
-            // First add EPC to the row, then fetch data to validate
-            const updatedLinens = [...linens];
-            updatedLinens[emptyRowIndex].epc = latestTag.EPC;
-            updatedLinens[emptyRowIndex].loading = true;
-            setLinens(updatedLinens);
-
-            // Check if EPC exists in API before finalizing the row
-            fetchLinenDataAndCheck(latestTag.EPC, emptyRowIndex);
-          } else {
-            // Create new row and check API first
-            const newIndex = linens.length;
-            setLinens((prev) => [
-              ...prev,
-              { epc: latestTag.EPC, status_id: 1, loading: true },
-            ]);
-
-            // Check API before keeping the row
-            setTimeout(
-              () => fetchLinenDataAndCheck(latestTag.EPC, newIndex),
-              100
-            );
-          }
+          // Check API first in background before adding to table
+          checkEPCAndAddToTable(latestTag.EPC);
         } else {
           console.log(
             `EPC ${latestTag.EPC} sudah ada di baris ${existingIndex + 1}`
@@ -464,6 +555,7 @@ const LinenCleanPage = ({ rfidHook }) => {
     ]);
     setProcessedTags(new Set());
     setValidEpcs(new Set());
+    setNonExistentEpcs(new Set());
   };
 
   const handleSubmit = async (e) => {
@@ -541,6 +633,7 @@ const LinenCleanPage = ({ rfidHook }) => {
       ]);
       setProcessedTags(new Set());
       setValidEpcs(new Set());
+      setNonExistentEpcs(new Set());
 
       // Stop scanning if active
       if (isLinenBersihActive) {
@@ -603,13 +696,13 @@ const LinenCleanPage = ({ rfidHook }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Customer <span className="text-red-500">*</span>
               </label>
-              <select
-                name="customerId"
-                value={formData.customerId}
-                onChange={(e) => {
-                  const selected = customers.find(
-                    (c) => c.customerId === e.target.value
-                  );
+              <Select
+                value={
+                  formData.customerId
+                    ? customers.find((c) => c.customerId === formData.customerId)
+                    : null
+                }
+                onChange={(selected) => {
                   const newFormData = {
                     ...formData,
                     customerId: selected?.customerId || "",
@@ -620,20 +713,32 @@ const LinenCleanPage = ({ rfidHook }) => {
                   // Re-validate all existing linens
                   revalidateLinens(selected?.customerId || "");
                 }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              >
-                <option value="">-- Pilih Customer --</option>
-                {customers.map((customer) => (
-                  <option key={customer.customerId} value={customer.customerId}>
-                    {customer.customerName} ({customer.customerCity})
-                  </option>
-                ))}
-              </select>
-              {loadingCustomers && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Loading customer...
-                </p>
-              )}
+                options={customers}
+                getOptionLabel={(customer) =>
+                  `${customer.customerName} (${customer.customerCity})`
+                }
+                getOptionValue={(customer) => customer.customerId}
+                placeholder="Cari customer..."
+                isClearable
+                isSearchable
+                isLoading={loadingCustomers}
+                noOptionsMessage={() => "Customer tidak ditemukan"}
+                className="w-full"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (baseStyles, state) => ({
+                    ...baseStyles,
+                    borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+                    boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                    fontSize: '14px',
+                    minHeight: '38px',
+                  }),
+                  option: (baseStyles) => ({
+                    ...baseStyles,
+                    fontSize: '14px',
+                  }),
+                }}
+              />
             </div>
 
             <div>

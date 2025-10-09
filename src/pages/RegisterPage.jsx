@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Play, Plus, Trash2, Square } from "lucide-react";
 import toast from "react-hot-toast";
+import Select from "react-select";
 
 const RegisterPage = ({ rfidHook }) => {
   const {
@@ -372,38 +373,55 @@ const RegisterPage = ({ rfidHook }) => {
       <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="relative">
+            <div className="relative z-40">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Customer
               </label>
-              <select
-                name="customerId"
-                value={formData.customerId}
-                onChange={(e) => {
-                  const selected = customers.find(
-                    (c) => c.customerId === e.target.value
-                  );
+              <Select
+                value={
+                  formData.customerId
+                    ? customers.find((c) => c.customerId === formData.customerId)
+                    : null
+                }
+                onChange={(selected) =>
                   setFormData({
                     ...formData,
                     customerId: selected?.customerId || "",
                     customerName: selected?.customerName || "",
-                  });
+                  })
+                }
+                options={customers}
+                getOptionLabel={(customer) =>
+                  `${customer.customerName} (${customer.customerCity})`
+                }
+                getOptionValue={(customer) => customer.customerId}
+                placeholder="Cari customer..."
+                isClearable
+                isSearchable
+                isLoading={loadingCustomers}
+                noOptionsMessage={() => "Customer tidak ditemukan"}
+                className="w-full"
+                classNamePrefix="react-select"
+                menuPortalTarget={document.body}
+                menuPortalStyle={{ zIndex: 9998 }}
+                styles={{
+                  control: (baseStyles, state) => ({
+                    ...baseStyles,
+                    borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+                    boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                    fontSize: '14px',
+                    minHeight: '38px',
+                  }),
+                  option: (baseStyles) => ({
+                    ...baseStyles,
+                    fontSize: '14px',
+                  }),
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9998,
+                  }),
                 }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              >
-                <option value="">-- Pilih Customer --</option>
-                {customers.map((customer) => (
-                  <option key={customer.customerId} value={customer.customerId}>
-                    {customer.customerName} ({customer.customerCity})
-                  </option>
-                ))}
-              </select>
-
-              {loadingCustomers && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Loading customer...
-                </p>
-              )}
+              />
             </div>
 
             <div>
@@ -415,16 +433,16 @@ const RegisterPage = ({ rfidHook }) => {
                 value={formData.rfidRegisterDescription}
                 onChange={handleChange}
                 placeholder="Deskripsi registrasi RFID"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent "
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
               ></textarea>
             </div>
           </div>
 
-          {/* Linen Table Section */}
+          {/* EPC, Linen & Room Table Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Data Linen (EPC & Room ID)
+                Data EPC, Linen & Room
               </label>
               <div className="flex gap-2">
                 <button
@@ -433,7 +451,7 @@ const RegisterPage = ({ rfidHook }) => {
                   className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
                 >
                   <Trash2 size={14} />
-                  <span>Clear All</span>
+                  <span>Clear</span>
                 </button>
               </div>
             </div>
@@ -463,10 +481,11 @@ const RegisterPage = ({ rfidHook }) => {
                   </>
                 )}
               </button>
-            </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
+                          </div>
+
+            {/* EPC, Linen & Room Table */}
+            <div className="overflow-x-auto relative z-50">
               <table className="w-full border border-gray-300 rounded-lg">
                 <thead>
                   <tr className="bg-gray-50">
@@ -474,10 +493,10 @@ const RegisterPage = ({ rfidHook }) => {
                       No
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Linen
+                      EPC
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      EPC
+                      Linen
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Room ID
@@ -494,27 +513,6 @@ const RegisterPage = ({ rfidHook }) => {
                     >
                       <td className="px-4 py-3 text-sm text-gray-700 border-b">
                         {index + 1}
-                        {linen.epc && (
-                          <span className="ml-2 text-xs text-green-600">
-                            ✓ Scanned
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
-                        <select
-                          value={linen.linenId}
-                          onChange={(e) =>
-                            handleLinenChange(index, "linenId", e.target.value)
-                          }
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent"
-                        >
-                          <option value="">-- Pilih Linen --</option>
-                          {linenOptions.map((linen) => (
-                            <option key={linen.linenId} value={linen.linenId}>
-                              {linen.linenName} - ({linen.linenId})
-                            </option>
-                          ))}
-                        </select>
                       </td>
                       <td className="px-4 py-3 border-b">
                         <input
@@ -527,21 +525,94 @@ const RegisterPage = ({ rfidHook }) => {
                           }`}
                         />
                       </td>
-                      <td className="px-4 py-3 border-b">
-                        <select
-                          value={linen.roomId}
-                          onChange={(e) =>
-                            handleLinenChange(index, "roomId", e.target.value)
-                          }
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent"
-                        >
-                          <option value="">-- Pilih Room --</option>
-                          {rooms.map((room) => (
-                            <option key={room.roomId} value={room.roomId}>
-                              {room.roomName} ({room.roomId})
-                            </option>
-                          ))}
-                        </select>
+                      <td className="px-4 py-3 border-b relative">
+                        <div className="relative">
+                          <Select
+                            value={
+                              linen.linenId
+                                ? linenOptions.find((l) => l.linenId === linen.linenId)
+                                : null
+                            }
+                            onChange={(selected) =>
+                              handleLinenChange(index, "linenId", selected?.linenId || "")
+                            }
+                            options={linenOptions}
+                            getOptionLabel={(linen) =>
+                              `${linen.linenName} - (${linen.linenId})`
+                            }
+                            getOptionValue={(linen) => linen.linenId}
+                            placeholder="Pilih linen..."
+                            isClearable
+                            isSearchable
+                            isLoading={loadingLinens}
+                            noOptionsMessage={() => "Linen tidak ditemukan"}
+                            className="w-full"
+                            classNamePrefix="react-select"
+                            menuPortalTarget={document.body}
+                            menuPortalStyle={{ zIndex: 9998 }}
+                            styles={{
+                              control: (baseStyles, state) => ({
+                                ...baseStyles,
+                                borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+                                boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                                fontSize: '13px',
+                                minHeight: '32px',
+                              }),
+                              option: (baseStyles) => ({
+                                ...baseStyles,
+                                fontSize: '13px',
+                              }),
+                              menuPortal: (base) => ({
+                                ...base,
+                                zIndex: 9998,
+                              }),
+                            }}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 border-b relative">
+                        <div className="relative">
+                          <Select
+                            value={
+                              linen.roomId
+                                ? rooms.find((r) => r.roomId === linen.roomId)
+                                : null
+                            }
+                            onChange={(selected) =>
+                              handleLinenChange(index, "roomId", selected?.roomId || "")
+                            }
+                            options={rooms}
+                            getOptionLabel={(room) =>
+                              `${room.roomName} (${room.roomId})`
+                            }
+                            getOptionValue={(room) => room.roomId}
+                            placeholder="Pilih room..."
+                            isClearable
+                            isSearchable
+                            noOptionsMessage={() => "Room tidak ditemukan"}
+                            className="w-full"
+                            classNamePrefix="react-select"
+                            menuPortalTarget={document.body}
+                            menuPortalStyle={{ zIndex: 9999 }}
+                            styles={{
+                              control: (baseStyles, state) => ({
+                                ...baseStyles,
+                                borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+                                boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                                fontSize: '13px',
+                                minHeight: '32px',
+                              }),
+                              option: (baseStyles) => ({
+                                ...baseStyles,
+                                fontSize: '13px',
+                              }),
+                              menuPortal: (base) => ({
+                                ...base,
+                                zIndex: 9999,
+                              }),
+                            }}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}
