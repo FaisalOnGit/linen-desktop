@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Play, Plus, Trash2, Square } from "lucide-react";
 import Select from "react-select";
+import toast from "react-hot-toast";
 
 const LinenCleanPage = ({ rfidHook }) => {
   const {
@@ -108,7 +109,9 @@ const LinenCleanPage = ({ rfidHook }) => {
 
     // Step 2: Check if EPC is already cached
     if (epcCache.has(epc)) {
-      console.log(`✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`);
+      console.log(
+        `✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`
+      );
       const cachedData = epcCache.get(epc);
 
       if (cachedData && cachedData.length > 0) {
@@ -179,7 +182,9 @@ const LinenCleanPage = ({ rfidHook }) => {
         console.log(`📋 EPC ${epc} berhasil ditambahkan dari cache`);
       } else {
         // Cached data is empty (not found)
-        console.log(`📭 EPC ${epc} ada di cache tapi data kosong, ditandai sebagai tidak ada`);
+        console.log(
+          `📭 EPC ${epc} ada di cache tapi data kosong, ditandai sebagai tidak ada`
+        );
         setNonExistentEpcs((prev) => new Set([...prev, epc]));
       }
       return;
@@ -210,7 +215,9 @@ const LinenCleanPage = ({ rfidHook }) => {
 
         if (result.success && result.data && result.data.length > 0) {
           const linenData = result.data[0];
-          console.log(`✅ Found linen data for EPC: ${epc} - ${linenData.linenName}`);
+          console.log(
+            `✅ Found linen data for EPC: ${epc} - ${linenData.linenName}`
+          );
 
           // Check if the linen belongs to the selected customer
           const isValidCustomer =
@@ -307,7 +314,9 @@ const LinenCleanPage = ({ rfidHook }) => {
 
     // Check if EPC is already cached
     if (epcCache.has(epc)) {
-      console.log(`✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`);
+      console.log(
+        `✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`
+      );
       const cachedData = epcCache.get(epc);
 
       if (cachedData && cachedData.length > 0) {
@@ -510,7 +519,9 @@ const LinenCleanPage = ({ rfidHook }) => {
 
     // Check if EPC is already cached
     if (epcCache.has(epc)) {
-      console.log(`✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`);
+      console.log(
+        `✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`
+      );
       const cachedData = epcCache.get(epc);
 
       if (cachedData && cachedData.length > 0) {
@@ -518,8 +529,7 @@ const LinenCleanPage = ({ rfidHook }) => {
 
         // Check if the linen belongs to the selected customer
         const isValidCustomer =
-          !formData.customerId ||
-          linenData.customerId === formData.customerId;
+          !formData.customerId || linenData.customerId === formData.customerId;
 
         // Update the specific linen row with cached data
         setLinens((prev) =>
@@ -806,7 +816,10 @@ const LinenCleanPage = ({ rfidHook }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.customerId) {
-      alert("Pilih customer terlebih dahulu!");
+      toast.error("Pilih customer terlebih dahulu!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
       return;
     }
 
@@ -817,8 +830,12 @@ const LinenCleanPage = ({ rfidHook }) => {
 
     if (invalidTags.length > 0) {
       const invalidEPCs = invalidTags.map((tag) => tag.epc).join(", ");
-      alert(
-        `Tidak dapat memproses! Ada ${invalidTags.length} tag yang tidak sesuai dengan customer: ${invalidEPCs}`
+      toast.error(
+        `Tidak dapat memproses! Ada ${invalidTags.length} tag yang tidak sesuai dengan customer: ${invalidEPCs}`,
+        {
+          duration: 4000,
+          icon: "❌",
+        }
       );
       return;
     }
@@ -833,7 +850,10 @@ const LinenCleanPage = ({ rfidHook }) => {
       );
 
       if (validLinens.length === 0) {
-        alert("Minimal harus ada 1 EPC linen yang valid!");
+        toast.error("Minimal harus ada 1 EPC linen yang valid!", {
+          duration: 3000,
+          icon: "⚠️",
+        });
         return;
       }
 
@@ -859,13 +879,18 @@ const LinenCleanPage = ({ rfidHook }) => {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Request failed: ${response.status} - ${errorData}`);
-      }
-
       const result = await response.json();
       console.log("Response dari API:", result);
+
+      if (!response.ok) {
+        // Get error message from API or use default message
+        const errorMessage =
+          result.message || `Request failed: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      // Get message from API or use default message
+      const successMessage = result.message || "Proses linen bersih berhasil!";
 
       // Reset form after success
       setFormData({
@@ -886,16 +911,28 @@ const LinenCleanPage = ({ rfidHook }) => {
         stopLinenBersih();
       }
 
-      alert("Proses linen bersih berhasil!");
+      toast.success(successMessage, {
+        duration: 4000,
+        icon: "✅",
+      });
     } catch (error) {
       console.error("Error submit:", error);
-      alert(`Gagal proses linen bersih: ${error.message}`);
+      // Display error message from API or use default error message
+      const errorMessage =
+        error.message || "Gagal proses linen bersih, coba lagi!";
+      toast.error(errorMessage, {
+        duration: 4000,
+        icon: "❌",
+      });
     }
   };
 
   const handleToggleScan = () => {
     if (!isRfidAvailable) {
-      alert("Device belum terkoneksi!");
+      toast.error("Device belum terkoneksi!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
       return;
     }
 

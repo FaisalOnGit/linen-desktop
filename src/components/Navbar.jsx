@@ -50,7 +50,10 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
         rfidHook.clearTagStates();
         console.log(`🧹 Local tag states cleared when navigating to ${pageId}`);
       } catch (err) {
-        console.error("Error clearing local tag states during navigation:", err);
+        console.error(
+          "Error clearing local tag states during navigation:",
+          err
+        );
       }
     }
 
@@ -124,13 +127,13 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               size: "large",
               description: "Configure RFID reader",
             },
-            {
-              id: "print-test",
-              label: "Print\nTest",
-              icon: Printer,
-              size: "large",
-              description: "Test label printing",
-            },
+            // {
+            //   id: "print-test",
+            //   label: "Print\nTest",
+            //   icon: Printer,
+            //   size: "large",
+            //   description: "Test label printing",
+            // },
           ],
         },
       ],

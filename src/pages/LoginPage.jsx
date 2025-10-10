@@ -29,12 +29,9 @@ const LoginPage = ({ onLoginSuccess }) => {
         body: JSON.stringify({
           email: email,
           password: password,
+          platform_id: 3,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
       const data = await response.json();
       console.log("Login response:", data); // Debug log
@@ -60,22 +57,20 @@ const LoginPage = ({ onLoginSuccess }) => {
           setError("Login berhasil tetapi tidak menerima token.");
         }
       } else {
-        // Handle login failure
-        const errorMessage =
-          data.message ||
-          data.error ||
-          data.errors?.[0] ||
-          "Login gagal, periksa email/password.";
+        // Handle login failure - display API message
+        const errorMessage = data.message || "Login gagal, periksa email/password.";
         setError(errorMessage);
       }
     } catch (err) {
       console.error("Login error:", err);
 
-      // Handle different types of errors
-      if (err.name === "TypeError" && err.message.includes("fetch")) {
+      // If it's a failed response with API data, display the API message
+      if (err.message.includes("HTTP error")) {
+        // Let the response handling above take care of the API message
+        const errorMessage = "Login gagal. Cek kembali email dan password.";
+        setError(errorMessage);
+      } else if (err.name === "TypeError" && err.message.includes("fetch")) {
         setError("Tidak dapat terhubung ke server. Periksa koneksi internet.");
-      } else if (err.message.includes("HTTP error")) {
-        setError("Login gagal. Cek kembali email dan password.");
       } else if (err.name === "SyntaxError") {
         setError("Response server tidak valid.");
       } else {

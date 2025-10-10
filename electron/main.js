@@ -9,7 +9,12 @@ const {
 const path = require("path");
 const fs = require("fs");
 const { Worker } = require("worker_threads");
-const { loadConfig, saveConfig, savePowerSettings, getPowerSettings } = require("./config");
+const {
+  loadConfig,
+  saveConfig,
+  savePowerSettings,
+  getPowerSettings,
+} = require("./config");
 const { exec } = require("child_process");
 const util = require("util");
 const execPromise = util.promisify(exec);
@@ -76,17 +81,35 @@ function getDllPath() {
   // Check if Symbol.RFID3.Host.dll exists in the same directory
   const dllDir = path.dirname(dllPath);
   const symbolDllPath = path.join(dllDir, "Symbol.RFID3.Host.dll");
-  const symbolDllInExecPath = path.join(path.dirname(process.execPath), "Symbol.RFID3.Host.dll");
+  const symbolDllInExecPath = path.join(
+    path.dirname(process.execPath),
+    "Symbol.RFID3.Host.dll"
+  );
 
-  console.log("Checking Symbol.RFID3.Host.dll in DLL directory:", symbolDllPath);
-  console.log("Symbol.RFID3.Host.dll exists in DLL directory:", fs.existsSync(symbolDllPath));
-  console.log("Checking Symbol.RFID3.Host.dll in exec directory:", symbolDllInExecPath);
-  console.log("Symbol.RFID3.Host.dll exists in exec directory:", fs.existsSync(symbolDllInExecPath));
+  console.log(
+    "Checking Symbol.RFID3.Host.dll in DLL directory:",
+    symbolDllPath
+  );
+  console.log(
+    "Symbol.RFID3.Host.dll exists in DLL directory:",
+    fs.existsSync(symbolDllPath)
+  );
+  console.log(
+    "Checking Symbol.RFID3.Host.dll in exec directory:",
+    symbolDllInExecPath
+  );
+  console.log(
+    "Symbol.RFID3.Host.dll exists in exec directory:",
+    fs.existsSync(symbolDllInExecPath)
+  );
 
   // List all files in the directory for debugging
   try {
     console.log("Files in DLL directory:", fs.readdirSync(dllDir));
-    console.log("Files in exec directory:", fs.readdirSync(path.dirname(process.execPath)));
+    console.log(
+      "Files in exec directory:",
+      fs.readdirSync(path.dirname(process.execPath))
+    );
   } catch (err) {
     console.error("Error listing directory files:", err);
   }
@@ -116,12 +139,19 @@ function initializeRfidFunctions() {
       console.error(`Symbol.RFID3.Host.dll not found in: ${symbolDllPath}`);
 
       // Try to copy from exec directory if exists there
-      const symbolDllInExecPath = path.join(path.dirname(process.execPath), "Symbol.RFID3.Host.dll");
+      const symbolDllInExecPath = path.join(
+        path.dirname(process.execPath),
+        "Symbol.RFID3.Host.dll"
+      );
       if (fs.existsSync(symbolDllInExecPath)) {
-        console.log(`Copying Symbol.RFID3.Host.dll from ${symbolDllInExecPath} to ${symbolDllPath}`);
+        console.log(
+          `Copying Symbol.RFID3.Host.dll from ${symbolDllInExecPath} to ${symbolDllPath}`
+        );
         fs.copyFileSync(symbolDllInExecPath, symbolDllPath);
       } else {
-        throw new Error(`Symbol.RFID3.Host.dll not found in either ${symbolDllPath} or ${symbolDllInExecPath}`);
+        throw new Error(
+          `Symbol.RFID3.Host.dll not found in either ${symbolDllPath} or ${symbolDllInExecPath}`
+        );
       }
     }
 
@@ -195,7 +225,9 @@ function initializeRfidFunctions() {
 
     // Provide more helpful error message
     if (error.message.includes("Symbol.RFID3.Host")) {
-      throw new Error(`RFID library error: ${error.message}. Please ensure Symbol.RFID3.Host.dll is in the same directory as ZebraLib.dll and that .NET Framework 4.5 or higher is installed.`);
+      throw new Error(
+        `RFID library error: ${error.message}. Please ensure Symbol.RFID3.Host.dll is in the same directory as ZebraLib.dll and that .NET Framework 4.5 or higher is installed.`
+      );
     }
 
     throw error;
@@ -215,6 +247,8 @@ function createWindow() {
     width: 1200,
     height: 800,
     autoHideMenuBar: true,
+    maximized: true,
+    frame: true,
     webPreferences: {
       sandbox: false,
       preload: path.join(__dirname, "preload.js"),
@@ -281,10 +315,13 @@ ipcMain.handle("save-config", (event, config) => {
   return true;
 });
 
-ipcMain.handle("save-power-settings", (event, { powerSettings, antennaEnabled }) => {
-  savePowerSettings(powerSettings, antennaEnabled);
-  return true;
-});
+ipcMain.handle(
+  "save-power-settings",
+  (event, { powerSettings, antennaEnabled }) => {
+    savePowerSettings(powerSettings, antennaEnabled);
+    return true;
+  }
+);
 
 ipcMain.handle("get-power-settings", () => {
   return getPowerSettings();

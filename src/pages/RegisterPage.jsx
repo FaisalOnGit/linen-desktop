@@ -316,12 +316,18 @@ const RegisterPage = ({ rfidHook }) => {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-      }
-
       const result = await response.json();
       console.log("Response dari API:", result);
+
+      if (!response.ok) {
+        // Get error message from API or use default message
+        const errorMessage =
+          result.message || `Request failed: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      // Get message from API or use default message
+      const successMessage = result.message || "Registrasi RFID berhasil!";
 
       // Reset form after success
       setFormData({
@@ -339,13 +345,22 @@ const RegisterPage = ({ rfidHook }) => {
         stopRegister();
       }
 
-      toast.success("Registrasi RFID berhasil!", {
+      // Refresh data after successful registration
+      await fetchCustomers();
+      await fetchLinens();
+      if (formData.customerId) {
+        await fetchRooms(formData.customerId);
+      }
+
+      toast.success(successMessage, {
         duration: 4000,
         icon: "✅",
       });
     } catch (error) {
       console.error("Error submit:", error);
-      toast.error("Gagal registrasi RFID, coba lagi!", {
+      // Display error message from API or use default error message
+      const errorMessage = error.message || "Gagal registrasi RFID, coba lagi!";
+      toast.error(errorMessage, {
         duration: 4000,
         icon: "❌",
       });
@@ -368,6 +383,31 @@ const RegisterPage = ({ rfidHook }) => {
     }
   };
 
+  // Fungsi validasi form
+  const isFormValid = () => {
+    // Check if customer is selected
+    if (!formData.customerId?.trim()) {
+      return false;
+    }
+
+    // Check if description is filled
+    if (!formData.rfidRegisterDescription?.trim()) {
+      return false;
+    }
+
+    // Check if there's at least one valid linen row
+    const validLinens = linens.filter(
+      (linen) =>
+        linen.linenId?.trim() && linen.epc?.trim() && linen.roomId?.trim()
+    );
+
+    if (validLinens.length === 0) {
+      return false;
+    }
+
+    return true;
+  };
+
   return (
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
@@ -380,7 +420,9 @@ const RegisterPage = ({ rfidHook }) => {
               <Select
                 value={
                   formData.customerId
-                    ? customers.find((c) => c.customerId === formData.customerId)
+                    ? customers.find(
+                        (c) => c.customerId === formData.customerId
+                      )
                     : null
                 }
                 onChange={(selected) =>
@@ -407,14 +449,14 @@ const RegisterPage = ({ rfidHook }) => {
                 styles={{
                   control: (baseStyles, state) => ({
                     ...baseStyles,
-                    borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
-                    boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
-                    fontSize: '14px',
-                    minHeight: '38px',
+                    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+                    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
+                    fontSize: "14px",
+                    minHeight: "38px",
                   }),
                   option: (baseStyles) => ({
                     ...baseStyles,
-                    fontSize: '14px',
+                    fontSize: "14px",
                   }),
                   menuPortal: (base) => ({
                     ...base,
@@ -481,8 +523,7 @@ const RegisterPage = ({ rfidHook }) => {
                   </>
                 )}
               </button>
-
-                          </div>
+            </div>
 
             {/* EPC, Linen & Room Table */}
             <div className="overflow-x-auto relative z-50">
@@ -530,11 +571,17 @@ const RegisterPage = ({ rfidHook }) => {
                           <Select
                             value={
                               linen.linenId
-                                ? linenOptions.find((l) => l.linenId === linen.linenId)
+                                ? linenOptions.find(
+                                    (l) => l.linenId === linen.linenId
+                                  )
                                 : null
                             }
                             onChange={(selected) =>
-                              handleLinenChange(index, "linenId", selected?.linenId || "")
+                              handleLinenChange(
+                                index,
+                                "linenId",
+                                selected?.linenId || ""
+                              )
                             }
                             options={linenOptions}
                             getOptionLabel={(linen) =>
@@ -553,14 +600,18 @@ const RegisterPage = ({ rfidHook }) => {
                             styles={{
                               control: (baseStyles, state) => ({
                                 ...baseStyles,
-                                borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
-                                boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
-                                fontSize: '13px',
-                                minHeight: '32px',
+                                borderColor: state.isFocused
+                                  ? "#3b82f6"
+                                  : "#d1d5db",
+                                boxShadow: state.isFocused
+                                  ? "0 0 0 1px #3b82f6"
+                                  : "none",
+                                fontSize: "13px",
+                                minHeight: "32px",
                               }),
                               option: (baseStyles) => ({
                                 ...baseStyles,
-                                fontSize: '13px',
+                                fontSize: "13px",
                               }),
                               menuPortal: (base) => ({
                                 ...base,
@@ -579,7 +630,11 @@ const RegisterPage = ({ rfidHook }) => {
                                 : null
                             }
                             onChange={(selected) =>
-                              handleLinenChange(index, "roomId", selected?.roomId || "")
+                              handleLinenChange(
+                                index,
+                                "roomId",
+                                selected?.roomId || ""
+                              )
                             }
                             options={rooms}
                             getOptionLabel={(room) =>
@@ -597,14 +652,18 @@ const RegisterPage = ({ rfidHook }) => {
                             styles={{
                               control: (baseStyles, state) => ({
                                 ...baseStyles,
-                                borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
-                                boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
-                                fontSize: '13px',
-                                minHeight: '32px',
+                                borderColor: state.isFocused
+                                  ? "#3b82f6"
+                                  : "#d1d5db",
+                                boxShadow: state.isFocused
+                                  ? "0 0 0 1px #3b82f6"
+                                  : "none",
+                                fontSize: "13px",
+                                minHeight: "32px",
                               }),
                               option: (baseStyles) => ({
                                 ...baseStyles,
-                                fontSize: '13px',
+                                fontSize: "13px",
                               }),
                               menuPortal: (base) => ({
                                 ...base,
@@ -624,7 +683,12 @@ const RegisterPage = ({ rfidHook }) => {
           <div>
             <button
               onClick={handleSubmit}
-              className="w-full bg-primary hover:bg-blue-400 text-white px-4 py-3 rounded-lg font-medium"
+              disabled={!isFormValid()}
+              className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                isFormValid()
+                  ? "bg-primary hover:bg-blue-400 text-white cursor-pointer"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               Register Linen (
               {
