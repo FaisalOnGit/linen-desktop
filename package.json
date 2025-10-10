@@ -90,6 +90,10 @@
       {
         "from": "electron/lib/ZebraLib.dll",
         "to": "ZebraLib.dll"
+      },
+      {
+        "from": "electron/lib/Symbol.RFID3.Host.dll",
+        "to": "Symbol.RFID3.Host.dll"
       }
     ]
   }

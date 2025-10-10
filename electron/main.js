@@ -26,13 +26,9 @@ function getDllPath() {
   } else {
     const possiblePaths = [
       path.join(path.dirname(process.execPath), "ZebraLib.dll"),
-
       path.join(process.resourcesPath, "lib", "ZebraLib.dll"),
-
       path.join(__dirname, "lib", "ZebraLib.dll"),
-
       path.join(path.dirname(__dirname), "lib", "ZebraLib.dll"),
-
       path.join(
         path.dirname(process.execPath),
         "resources",
@@ -77,6 +73,24 @@ function getDllPath() {
   console.log("Using DLL path:", dllPath);
   console.log("DLL exists:", fs.existsSync(dllPath));
 
+  // Check if Symbol.RFID3.Host.dll exists in the same directory
+  const dllDir = path.dirname(dllPath);
+  const symbolDllPath = path.join(dllDir, "Symbol.RFID3.Host.dll");
+  const symbolDllInExecPath = path.join(path.dirname(process.execPath), "Symbol.RFID3.Host.dll");
+
+  console.log("Checking Symbol.RFID3.Host.dll in DLL directory:", symbolDllPath);
+  console.log("Symbol.RFID3.Host.dll exists in DLL directory:", fs.existsSync(symbolDllPath));
+  console.log("Checking Symbol.RFID3.Host.dll in exec directory:", symbolDllInExecPath);
+  console.log("Symbol.RFID3.Host.dll exists in exec directory:", fs.existsSync(symbolDllInExecPath));
+
+  // List all files in the directory for debugging
+  try {
+    console.log("Files in DLL directory:", fs.readdirSync(dllDir));
+    console.log("Files in exec directory:", fs.readdirSync(path.dirname(process.execPath)));
+  } catch (err) {
+    console.error("Error listing directory files:", err);
+  }
+
   return dllPath;
 }
 
@@ -93,9 +107,29 @@ let connect,
 function initializeRfidFunctions() {
   try {
     dllPath = getDllPath();
+
+    // Check if Symbol.RFID3.Host.dll exists in the same directory as ZebraLib.dll
+    const dllDir = path.dirname(dllPath);
+    const symbolDllPath = path.join(dllDir, "Symbol.RFID3.Host.dll");
+
+    if (!fs.existsSync(symbolDllPath)) {
+      console.error(`Symbol.RFID3.Host.dll not found in: ${symbolDllPath}`);
+
+      // Try to copy from exec directory if exists there
+      const symbolDllInExecPath = path.join(path.dirname(process.execPath), "Symbol.RFID3.Host.dll");
+      if (fs.existsSync(symbolDllInExecPath)) {
+        console.log(`Copying Symbol.RFID3.Host.dll from ${symbolDllInExecPath} to ${symbolDllPath}`);
+        fs.copyFileSync(symbolDllInExecPath, symbolDllPath);
+      } else {
+        throw new Error(`Symbol.RFID3.Host.dll not found in either ${symbolDllPath} or ${symbolDllInExecPath}`);
+      }
+    }
+
     const edge = require("electron-edge-js");
 
     process.env.EDGE_USE_CORECLR = "0";
+
+    console.log("Initializing RFID functions with DLL path:", dllPath);
 
     connect = edge.func({
       assemblyFile: dllPath,
@@ -156,6 +190,14 @@ function initializeRfidFunctions() {
     console.log("RFID functions initialized successfully");
   } catch (error) {
     console.error("Error initializing RFID functions:", error);
+    console.error("Error details:", error.message);
+    console.error("Error stack:", error.stack);
+
+    // Provide more helpful error message
+    if (error.message.includes("Symbol.RFID3.Host")) {
+      throw new Error(`RFID library error: ${error.message}. Please ensure Symbol.RFID3.Host.dll is in the same directory as ZebraLib.dll and that .NET Framework 4.5 or higher is installed.`);
+    }
+
     throw error;
   }
 }

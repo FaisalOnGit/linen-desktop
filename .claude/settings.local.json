@@ -17,7 +17,10 @@
       "Bash(npm uninstall:*)",
       "Bash(curl:*)",
       "Bash(taskkill:*)",
-      "Bash(npm rebuild:*)"
+      "Bash(npm rebuild:*)",
+      "Bash(find:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd:*)"
     ],
     "deny": [],
     "ask": []
