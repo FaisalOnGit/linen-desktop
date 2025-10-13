@@ -69,10 +69,10 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
           commands: [
             {
               id: "register",
-              label: "Register\nLinen",
+              label: "Register\nRFID",
               icon: FileText,
               size: "large",
-              description: "Register new linen items",
+              description: "Register new RFID tags",
             },
           ],
         },

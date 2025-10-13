@@ -749,7 +749,7 @@ const LinenCleanPage = ({ rfidHook }) => {
       ...prev,
       linenQty: validLinens.length,
     }));
-  }, [linens.length]); // Optimize to only run when linen count changes
+  }, [linens]); // Run when linens array changes (content or length)
 
   const handleChange = (e) => {
     const { name, value } = e.target;

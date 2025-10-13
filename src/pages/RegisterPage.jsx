@@ -262,18 +262,47 @@ const RegisterPage = ({ rfidHook }) => {
   };
 
   const removeLinenRow = (index) => {
-    if (linens.length > 1) {
+    // Pastikan tidak bisa menghapus jika hanya 1 baris tersisa
+    if (linens.length <= 1) {
+      toast.error("Minimal harus ada satu baris data", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+
+    try {
       const removedLinen = linens[index];
-      if (removedLinen.epc) {
+
+      // Hapus EPC dari processedTags jika ada
+      if (removedLinen?.epc) {
         setProcessedTags((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(removedLinen.epc);
+          return newSet;
+        });
+
+        // Hapus EPC dari validEpcs jika ada
+        setValidEpcs((prev) => {
           const newSet = new Set(prev);
           newSet.delete(removedLinen.epc);
           return newSet;
         });
       }
 
-      const updatedLinens = linens.filter((_, i) => i !== index);
-      setLinens(updatedLinens);
+      // Update linens array dengan menghapus item pada index tertentu
+      setLinens((prev) => prev.filter((_, i) => i !== index));
+
+      toast.success("Baris berhasil dihapus", {
+        duration: 2000,
+        icon: "✅",
+      });
+    } catch (error) {
+      console.error("Error removing linen row:", error);
+      toast.error("Gagal menghapus baris", {
+        duration: 3000,
+        icon: "❌",
+      });
     }
   };
 
@@ -542,6 +571,9 @@ const RegisterPage = ({ rfidHook }) => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Room ID
                     </th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 border-b">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -672,6 +704,16 @@ const RegisterPage = ({ rfidHook }) => {
                             }}
                           />
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-center border-b">
+                        <button
+                          type="button"
+                          onClick={() => removeLinenRow(index)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors duration-200"
+                          title="Hapus baris ini"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -684,7 +684,7 @@ const DeliveryPage = ({ rfidHook }) => {
         }
       }
     }
-  }, [deliveryTags, processedTags, linens]);
+  }, [deliveryTags, processedTags]); // Remove 'linens' from dependency array
 
   useEffect(() => {
     const validLinens = linens.filter((linen) => linen.epc?.trim());
@@ -762,16 +762,32 @@ const DeliveryPage = ({ rfidHook }) => {
     setValidEpcs(new Set());
     setNonExistentEpcs(new Set());
 
-    // Also clear form data if needed
-    setFormData(prev => ({
-      ...prev,
-      qty: 0, // Reset quantity to 0 since no linens
-    }));
+    // Reset all form data to initial state
+    setFormData({
+      customerId: "",
+      customerName: "",
+      qty: 0,
+      driverName: "",
+      plateNumber: "",
+    });
   };
 
-  // Alternative clear function that clears tags state
+  // Alternative clear function that clears tags state using RFID hook
   const clearTags = () => {
-    clearAllEPCs();
+    // Use the RFID hook's clearTags function if available
+    if (rfidHook && rfidHook.clearTags) {
+      try {
+        rfidHook.clearTags();
+        console.log("🧹 Tags cleared using RFID hook in DeliveryPage");
+      } catch (err) {
+        console.error("Error clearing tags via RFID hook:", err);
+        // Fallback to local clear
+        clearAllEPCs();
+      }
+    } else {
+      // Fallback to local clear if RFID hook is not available
+      clearAllEPCs();
+    }
   };
 
   const handleSubmit = async (e) => {

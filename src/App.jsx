@@ -11,6 +11,7 @@ import SortingLinenPage from "./pages/SortingPage";
 import PrintTestPage from "./pages/PrintTestPage";
 import { TableModeProvider } from "./contexts/TableModeContext";
 import Print from "./pages/Print";
+import DeliveryPage2 from "./pages/Delivery";
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
@@ -40,7 +41,7 @@ const App = () => {
       case "grouping":
         return <GroupingPage rfidHook={rfidHook} />;
       case "delivery":
-        return <DeliveryPage rfidHook={rfidHook} />;
+        return <DeliveryPage2 rfidHook={rfidHook} />;
       case "print-test":
         return <PrintTestPage />;
       default:
