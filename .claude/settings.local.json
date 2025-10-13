@@ -21,7 +21,11 @@
       "Bash(find:*)",
       "Bash(tasklist:*)",
       "Bash(cmd:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git reflog:*)",
+      "Bash(git gc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
