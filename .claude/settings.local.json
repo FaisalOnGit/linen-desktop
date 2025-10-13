@@ -20,7 +20,8 @@
       "Bash(npm rebuild:*)",
       "Bash(find:*)",
       "Bash(tasklist:*)",
-      "Bash(cmd:*)"
+      "Bash(cmd:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

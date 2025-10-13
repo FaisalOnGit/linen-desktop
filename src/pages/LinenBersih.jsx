@@ -66,7 +66,13 @@ const LinenCleanPage = ({ rfidHook }) => {
         }
       }
     }
-  }, [linenBersihTags, linens, processedTags, processScannedEPC, isLinenBersihActive]);
+  }, [
+    linenBersihTags,
+    linens,
+    processedTags,
+    processScannedEPC,
+    isLinenBersihActive,
+  ]);
 
   // Update linen count when linens change
   useEffect(() => {
@@ -118,7 +124,7 @@ const LinenCleanPage = ({ rfidHook }) => {
 
     clearAllEPCs();
     // Also reset the linen quantity in form data
-    setFormData(prev => {
+    setFormData((prev) => {
       console.log("🔄 Resetting form data:", { ...prev, linenQty: 0 });
       return {
         ...prev,

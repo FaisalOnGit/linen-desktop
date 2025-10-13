@@ -4,7 +4,7 @@ import Select from "react-select";
 import toast from "react-hot-toast";
 import { useDeliveryData } from "../hooks/useDeliveryData";
 
-const DeliveryPage = ({ rfidHook }) => {
+const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const {
     deliveryTags = [],
     startDelivery,
@@ -12,6 +12,16 @@ const DeliveryPage = ({ rfidHook }) => {
     isDeliveryActive = false,
     isRfidAvailable = false,
   } = rfidHook || {};
+
+  // Delivery types configuration
+  const deliveryTypes = {
+    1: { title: "Pengiriman Baru" },
+    2: { title: "Pengiriman Reguler" },
+    3: { title: "Pengiriman Rewash" },
+    4: { title: "Pengiriman Retur" },
+  };
+
+  const currentDeliveryType = deliveryTypes[deliveryType] || deliveryTypes[1];
 
   const [formData, setFormData] = useState({
     customerId: "",
@@ -164,6 +174,7 @@ const DeliveryPage = ({ rfidHook }) => {
 
       // Create payload
       const payload = {
+        deliveryId: deliveryType, // <-- Hardcode deliveryId based on menu
         customerId: formData.customerId,
         qty: validLinens.length,
         driverName: formData.driverName,
@@ -282,6 +293,12 @@ const DeliveryPage = ({ rfidHook }) => {
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="space-y-6">
+          {/* Header with Delivery Type */}
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-800">
+              {currentDeliveryType.title}
+            </h1>
+          </div>
           {/* Customer and Delivery Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="relative">
@@ -551,7 +568,8 @@ const DeliveryPage = ({ rfidHook }) => {
               }`}
             >
               <Truck size={16} />
-              Proses Delivery ({getValidLinenCount()} valid items)
+              Proses {currentDeliveryType.title} ({getValidLinenCount()} valid
+              items)
             </button>
           </div>
         </div>

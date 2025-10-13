@@ -40,8 +40,14 @@ const App = () => {
         return <LinenCleanPage rfidHook={rfidHook} />;
       case "grouping":
         return <GroupingPage rfidHook={rfidHook} />;
-      case "delivery":
-        return <DeliveryPage rfidHook={rfidHook} />;
+      case "delivery-new":
+        return <DeliveryPage rfidHook={rfidHook} deliveryType={1} />;
+      case "delivery-regular":
+        return <DeliveryPage rfidHook={rfidHook} deliveryType={2} />;
+      case "delivery-rewash":
+        return <DeliveryPage rfidHook={rfidHook} deliveryType={3} />;
+      case "delivery-retur":
+        return <DeliveryPage rfidHook={rfidHook} deliveryType={4} />;
       case "print-test":
         return <PrintTestPage />;
       default:

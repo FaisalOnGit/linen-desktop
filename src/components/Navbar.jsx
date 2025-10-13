@@ -7,6 +7,9 @@ import {
   Wifi,
   WifiOff,
   Printer,
+  Package,
+  RefreshCw,
+  RotateCcw,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
 
@@ -104,11 +107,32 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
           title: "Distribution",
           commands: [
             {
-              id: "delivery",
-              label: "Delivery\nLinen",
+              id: "delivery-new",
+              label: "Pengiriman\nBaru",
               icon: Truck,
               size: "large",
-              description: "Deliver linen to locations",
+              description: "New delivery shipments",
+            },
+            {
+              id: "delivery-regular",
+              label: "Pengiriman\nReguler",
+              icon: Package,
+              size: "large",
+              description: "Regular delivery shipments",
+            },
+            {
+              id: "delivery-rewash",
+              label: "Pengiriman\nRewash",
+              icon: RefreshCw,
+              size: "large",
+              description: "Rewash delivery shipments",
+            },
+            {
+              id: "delivery-retur",
+              label: "Pengiriman\nRetur",
+              icon: RotateCcw,
+              size: "large",
+              description: "Return delivery shipments",
             },
           ],
         },

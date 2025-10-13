@@ -51,7 +51,9 @@ export const useLinenData = (baseUrl, customerId) => {
     setNonExistentEpcs(new Set());
     setEpcCache(new Map());
 
-    console.log("✅ All EPC data cleared - processedTags, cache, and linens reset");
+    console.log(
+      "✅ All EPC data cleared - processedTags, cache, and linens reset"
+    );
   }, []);
 
   // Update linen field by index
