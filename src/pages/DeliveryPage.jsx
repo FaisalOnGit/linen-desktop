@@ -174,7 +174,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
       // Create payload
       const payload = {
-        deliveryId: deliveryType, // <-- Hardcode deliveryId based on menu
+        deliveryTypeId: deliveryType, // <-- Hardcode deliveryTypeId based on menu (1=Baru, 2=Reguler, 3=Rewash, 4=Retur)
         customerId: formData.customerId,
         qty: validLinens.length,
         driverName: formData.driverName,

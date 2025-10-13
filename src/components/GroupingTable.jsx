@@ -10,15 +10,13 @@ const GroupingTable = ({ groupingTags, isCompact = false }) => {
 
     try {
       const token = await window.authAPI.getToken();
-      const response = await fetch(
-        `https://app.nci.co.id/base_linen/api/Process/linen_rfid?epc=${epc}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const response = await fetch(`${baseUrl}/Process/linen_rfid?epc=${epc}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -121,20 +119,44 @@ const GroupingTable = ({ groupingTags, isCompact = false }) => {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className={`border-b ${isCompact ? "bg-gray-100" : "bg-gray-200"}`}>
-              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
+            <tr
+              className={`border-b ${
+                isCompact ? "bg-gray-100" : "bg-gray-200"
+              }`}
+            >
+              <th
+                className={`text-left font-medium text-gray-700 ${
+                  isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"
+                }`}
+              >
                 No Seri RFID
               </th>
-              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
+              <th
+                className={`text-left font-medium text-gray-700 ${
+                  isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"
+                }`}
+              >
                 Nama Linen
               </th>
-              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
+              <th
+                className={`text-left font-medium text-gray-700 ${
+                  isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"
+                }`}
+              >
                 Nama Customer
               </th>
-              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
+              <th
+                className={`text-left font-medium text-gray-700 ${
+                  isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"
+                }`}
+              >
                 Ruangan
               </th>
-              <th className={`text-left font-medium text-gray-700 ${isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"}`}>
+              <th
+                className={`text-left font-medium text-gray-700 ${
+                  isCompact ? "py-2 px-2 text-xs" : "py-4 px-4"
+                }`}
+              >
                 Status Linen
               </th>
             </tr>
@@ -142,11 +164,22 @@ const GroupingTable = ({ groupingTags, isCompact = false }) => {
           <tbody>
             {enrichedTags.length === 0 ? (
               <tr>
-                <td colSpan="5" className={`${isCompact ? "py-4 px-2" : "py-8 px-4"} text-center text-gray-500`}>
+                <td
+                  colSpan="5"
+                  className={`${
+                    isCompact ? "py-4 px-2" : "py-8 px-4"
+                  } text-center text-gray-500`}
+                >
                   <div className="flex flex-col items-center">
-                    <div className={`${isCompact ? "w-8 h-8" : "w-12 h-12"} bg-gray-100 rounded-full flex items-center justify-center mb-2`}>
+                    <div
+                      className={`${
+                        isCompact ? "w-8 h-8" : "w-12 h-12"
+                      } bg-gray-100 rounded-full flex items-center justify-center mb-2`}
+                    >
                       <svg
-                        className={`${isCompact ? "w-4 h-4" : "w-6 h-6"} text-gray-400`}
+                        className={`${
+                          isCompact ? "w-4 h-4" : "w-6 h-6"
+                        } text-gray-400`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -159,8 +192,14 @@ const GroupingTable = ({ groupingTags, isCompact = false }) => {
                         />
                       </svg>
                     </div>
-                    <p className={isCompact ? "text-xs" : ""}>Tidak ada tag terdeteksi</p>
-                    <p className={`text-gray-400 mt-1 ${isCompact ? "text-xs" : "text-sm"}`}>
+                    <p className={isCompact ? "text-xs" : ""}>
+                      Tidak ada tag terdeteksi
+                    </p>
+                    <p
+                      className={`text-gray-400 mt-1 ${
+                        isCompact ? "text-xs" : "text-sm"
+                      }`}
+                    >
                       Mulai pemindaian untuk melihat data
                     </p>
                   </div>
@@ -174,40 +213,97 @@ const GroupingTable = ({ groupingTags, isCompact = false }) => {
                 return (
                   <tr
                     key={`${epc}-${index}`}
-                    className={`border-b hover:bg-gray-50 transition-colors ${isCompact ? "text-xs" : ""}`}
+                    className={`border-b hover:bg-gray-50 transition-colors ${
+                      isCompact ? "text-xs" : ""
+                    }`}
                   >
-                    <td className={`${isCompact ? "py-2 px-2 font-mono text-xs" : "py-4 px-4 font-mono text-sm"} text-gray-800`}>
+                    <td
+                      className={`${
+                        isCompact
+                          ? "py-2 px-2 font-mono text-xs"
+                          : "py-4 px-4 font-mono text-sm"
+                      } text-gray-800`}
+                    >
                       {epc || "N/A"}
                     </td>
-                    <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"} text-gray-800`}>
+                    <td
+                      className={`${
+                        isCompact ? "py-2 px-2" : "py-4 px-4"
+                      } text-gray-800`}
+                    >
                       {isLoading ? (
                         <div className="flex items-center">
-                          <div className={`animate-spin rounded-full ${isCompact ? "h-3 w-3" : "h-4 w-4"} border-b-2 border-blue-600 mr-1`}></div>
-                          <span className={`text-gray-400 ${isCompact ? "text-xs" : ""}`}>Loading...</span>
+                          <div
+                            className={`animate-spin rounded-full ${
+                              isCompact ? "h-3 w-3" : "h-4 w-4"
+                            } border-b-2 border-blue-600 mr-1`}
+                          ></div>
+                          <span
+                            className={`text-gray-400 ${
+                              isCompact ? "text-xs" : ""
+                            }`}
+                          >
+                            Loading...
+                          </span>
                         </div>
                       ) : (
-                        <div className={isCompact ? "text-xs" : "font-medium"}>{tag.linenName}</div>
+                        <div className={isCompact ? "text-xs" : "font-medium"}>
+                          {tag.linenName}
+                        </div>
                       )}
                     </td>
-                    <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"} text-gray-800`}>
+                    <td
+                      className={`${
+                        isCompact ? "py-2 px-2" : "py-4 px-4"
+                      } text-gray-800`}
+                    >
                       {isLoading ? (
-                        <div className={`animate-pulse bg-gray-200 ${isCompact ? "h-3 w-16" : "h-4 w-20"} rounded`}></div>
+                        <div
+                          className={`animate-pulse bg-gray-200 ${
+                            isCompact ? "h-3 w-16" : "h-4 w-20"
+                          } rounded`}
+                        ></div>
                       ) : (
-                        <div className={isCompact ? "text-xs" : "font-medium"}>{tag.customerName}</div>
+                        <div className={isCompact ? "text-xs" : "font-medium"}>
+                          {tag.customerName}
+                        </div>
                       )}
                     </td>
-                    <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"} text-gray-800`}>
+                    <td
+                      className={`${
+                        isCompact ? "py-2 px-2" : "py-4 px-4"
+                      } text-gray-800`}
+                    >
                       {isLoading ? (
-                        <div className={`animate-pulse bg-gray-200 ${isCompact ? "h-3 w-12" : "h-4 w-16"} rounded`}></div>
+                        <div
+                          className={`animate-pulse bg-gray-200 ${
+                            isCompact ? "h-3 w-12" : "h-4 w-16"
+                          } rounded`}
+                        ></div>
                       ) : (
-                        <div className={isCompact ? "text-xs" : "font-medium"}>{tag.room}</div>
+                        <div className={isCompact ? "text-xs" : "font-medium"}>
+                          {tag.room}
+                        </div>
                       )}
                     </td>
                     <td className={`${isCompact ? "py-2 px-2" : "py-4 px-4"}`}>
                       {isLoading ? (
-                        <div className={`animate-pulse bg-gray-200 ${isCompact ? "h-4 w-12" : "h-6 w-16"} rounded-full`}></div>
+                        <div
+                          className={`animate-pulse bg-gray-200 ${
+                            isCompact ? "h-4 w-12" : "h-6 w-16"
+                          } rounded-full`}
+                        ></div>
                       ) : (
-                        <span className={isCompact ? getStatusColor(tag.status).replace("px-2 py-1", "px-1 py-0.5 text-xs") : getStatusColor(tag.status)}>
+                        <span
+                          className={
+                            isCompact
+                              ? getStatusColor(tag.status).replace(
+                                  "px-2 py-1",
+                                  "px-1 py-0.5 text-xs"
+                                )
+                              : getStatusColor(tag.status)
+                          }
+                        >
                           {tag.status}
                         </span>
                       )}
@@ -221,7 +317,11 @@ const GroupingTable = ({ groupingTags, isCompact = false }) => {
       </div>
 
       {enrichedTags.length > 0 && (
-        <div className={`bg-gray-50 border-t text-gray-600 ${isCompact ? "p-2 text-xs" : "p-4 text-sm"}`}>
+        <div
+          className={`bg-gray-50 border-t text-gray-600 ${
+            isCompact ? "p-2 text-xs" : "p-4 text-sm"
+          }`}
+        >
           <div className="flex items-center justify-center">
             <div>Total: {enrichedTags.length} tag(s) terdeteksi</div>
           </div>

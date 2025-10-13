@@ -52,6 +52,7 @@ const LinenCleanPage = ({ rfidHook }) => {
       if (latestTag && latestTag.EPC && !processedTags.has(latestTag.EPC)) {
         setProcessedTags((prev) => new Set([...prev, latestTag.EPC]));
 
+        // Check if EPC already exists (duplicate detection)
         const existingIndex = linens.findIndex(
           (linen) => linen.epc === latestTag.EPC
         );
@@ -60,8 +61,16 @@ const LinenCleanPage = ({ rfidHook }) => {
           // Process scanned EPC using the hook
           processScannedEPC(latestTag.EPC);
         } else {
+          // EPC already exists, show warning
           console.log(
-            `EPC ${latestTag.EPC} sudah ada di baris ${existingIndex + 1}`
+            `🔄 EPC ${latestTag.EPC} sudah ada di baris ${existingIndex + 1} - Duplikat!`
+          );
+          toast.error(
+            `EPC ${latestTag.EPC} sudah ada di baris ${existingIndex + 1}! Gunakan EPC yang berbeda.`,
+            {
+              duration: 3000,
+              icon: "🔄",
+            }
           );
         }
       }
