@@ -670,16 +670,24 @@ export const useRfid = () => {
       intervalRefs.current.linenBersih = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
-          const enrichedTags = tagsData.map((tag) => ({
-            ...tag,
-            linenName: "Sarung Bantal",
-            customerName: "RS NCI",
-            room: "Storage Bersih",
-            status: "Bersih",
-            washDate: new Date().toISOString().split("T")[0],
-            qualityCheck: "Passed",
-          }));
-          setLinenBersihTags(enrichedTags);
+
+          // Only add new tags that don't exist in current linenBersihTags
+          setLinenBersihTags(prevTags => {
+            const existingEpcSet = new Set(prevTags.map(tag => tag.EPC));
+            const newTags = tagsData.filter(tag => !existingEpcSet.has(tag.EPC));
+
+            const enrichedTags = newTags.map((tag) => ({
+              ...tag,
+              linenName: "Sarung Bantal",
+              customerName: "RS NCI",
+              room: "Storage Bersih",
+              status: "Bersih",
+              washDate: new Date().toISOString().split("T")[0],
+              qualityCheck: "Passed",
+            }));
+
+            return [...prevTags, ...enrichedTags];
+          });
         } catch (err) {
           console.error("Error fetching linen bersih tags:", err);
         }

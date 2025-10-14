@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 export const useLinenData = (baseUrl, customerId) => {
   const [linens, setLinens] = useState([
@@ -8,6 +8,9 @@ export const useLinenData = (baseUrl, customerId) => {
   const [validEpcs, setValidEpcs] = useState(new Set());
   const [nonExistentEpcs, setNonExistentEpcs] = useState(new Set());
   const [epcCache, setEpcCache] = useState(new Map());
+
+  // Track EPCs that are currently being processed to prevent race conditions
+  const currentlyProcessing = useRef(new Set());
 
   // Add new empty linen row
   const addLinenRow = useCallback(() => {
@@ -50,6 +53,9 @@ export const useLinenData = (baseUrl, customerId) => {
     setValidEpcs(new Set());
     setNonExistentEpcs(new Set());
     setEpcCache(new Map());
+
+    // Clear currently processing set
+    currentlyProcessing.current.clear();
 
     console.log(
       "✅ All EPC data cleared - processedTags, cache, and linens reset"
@@ -114,129 +120,49 @@ export const useLinenData = (baseUrl, customerId) => {
     async (epc) => {
       if (!epc.trim()) return;
 
-      console.log(`🔍 Processing EPC: ${epc}`);
+      console.log(`🔍 Processing LinenBersih EPC: ${epc}`);
 
-      // Step 1: Check if EPC has already been determined to not exist
-      if (nonExistentEpcs.has(epc)) {
-        console.log(
-          `❌ EPC ${epc} sudah dicek sebelumnya dan tidak ada di API, diabaikan`
-        );
+      // Check if EPC is currently being processed (race condition protection)
+      if (currentlyProcessing.current.has(epc)) {
+        console.log(`⚠️ EPC ${epc} sedang diproses, diabaikan`);
         return;
       }
 
-      // Step 2: Check if EPC is already cached
-      if (epcCache.has(epc)) {
-        console.log(
-          `✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`
-        );
-        const cachedData = epcCache.get(epc);
-
-        if (cachedData && cachedData.length > 0) {
-          const linenData = cachedData[0];
-
-          // Check if the linen belongs to the selected customer
-          const isValidCustomer =
-            !customerId || linenData.customerId === customerId;
-
-          // Add to valid EPCs set
-          setValidEpcs((prev) => new Set([...prev, epc]));
-
-          // EPC exists in cache - add it to the table
-          setLinens((prev) => {
-            const emptyRowIndex = prev.findIndex(
-              (linen) => linen.epc.trim() === ""
-            );
-
-            if (emptyRowIndex !== -1) {
-              // Use existing empty row
-              return prev.map((linen, i) =>
-                i === emptyRowIndex
-                  ? {
-                      ...linen,
-                      epc: linenData.epc,
-                      customerId: linenData.customerId,
-                      customerName: linenData.customerName,
-                      linenId: linenData.linenId,
-                      linenTypeName: linenData.linenTypeName,
-                      linenName: linenData.linenName,
-                      roomId: linenData.roomId,
-                      roomName: linenData.roomName,
-                      statusId: linenData.statusId,
-                      status: linenData.status,
-                      loading: false,
-                      isValidCustomer: isValidCustomer,
-                      errorMessage: !isValidCustomer
-                        ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
-                        : null,
-                    }
-                  : linen
-              );
-            } else {
-              // Create new row
-              return [
-                ...prev,
-                {
-                  epc: linenData.epc,
-                  customerId: linenData.customerId,
-                  customerName: linenData.customerName,
-                  linenId: linenData.linenId,
-                  linenTypeName: linenData.linenTypeName,
-                  linenName: linenData.linenName,
-                  roomId: linenData.roomId,
-                  roomName: linenData.roomName,
-                  statusId: linenData.statusId,
-                  status: linenData.status,
-                  status_id: linenData.statusId || 1,
-                  loading: false,
-                  isValidCustomer: isValidCustomer,
-                  errorMessage: !isValidCustomer
-                    ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
-                    : null,
-                },
-              ];
-            }
-          });
-          console.log(`📋 EPC ${epc} berhasil ditambahkan dari cache`);
-        } else {
-          // Cached data is empty (not found)
-          console.log(
-            `📭 EPC ${epc} ada di cache tapi data kosong, ditandai sebagai tidak ada`
-          );
-          setNonExistentEpcs((prev) => new Set([...prev, epc]));
-        }
+      // Check if EPC is already being processed or exists in processedTags
+      if (processedTags.has(epc)) {
+        console.log(`⚠️ EPC ${epc} sudah diproses sebelumnya, diabaikan`);
         return;
       }
 
-      // Step 3: EPC not found in cache, need to hit API
-      console.log(
-        `🌐 EPC ${epc} belum ada di cache, mengambil data dari API...`
-      );
+      // Check if EPC already exists in current linens (this is the real check)
+      const existingIndex = linens.findIndex((linen) => linen.epc === epc);
+      if (existingIndex !== -1) {
+        console.log(`⚠️ EPC ${epc} sudah ada di tabel, diabaikan`);
+        return;
+      }
+
+      // Mark this EPC as being processed to prevent duplicates and race conditions
+      currentlyProcessing.current.add(epc);
+      setProcessedTags((prev) => new Set([...prev, epc]));
 
       try {
-        const token = await window.authAPI.getToken();
-        console.log(`📡 Calling API for EPC: ${epc}`);
+        // Step 1: Check if EPC has already been determined to not exist
+        if (nonExistentEpcs.has(epc)) {
+          console.log(
+            `❌ EPC ${epc} sudah dicek sebelumnya dan tidak ada di API, diabaikan`
+          );
+          return;
+        }
 
-        const response = await fetch(
-          `${baseUrl}/Process/linen_rfid?epc=${encodeURIComponent(epc)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        // Step 2: Check if EPC is already cached
+        if (epcCache.has(epc)) {
+          console.log(
+            `✅ EPC ${epc} sudah di-cache, menggunakan data yang tersimpan`
+          );
+          const cachedData = epcCache.get(epc);
 
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`💾 Saving API response to cache for EPC: ${epc}`);
-          // Cache the response regardless of success or failure
-          setEpcCache((prev) => new Map([...prev, [epc, result.data || []]]));
-
-          if (result.success && result.data && result.data.length > 0) {
-            const linenData = result.data[0];
-            console.log(
-              `✅ Found linen data for EPC: ${epc} - ${linenData.linenName}`
-            );
+          if (cachedData && cachedData.length > 0) {
+            const linenData = cachedData[0];
 
             // Check if the linen belongs to the selected customer
             const isValidCustomer =
@@ -245,15 +171,15 @@ export const useLinenData = (baseUrl, customerId) => {
             // Add to valid EPCs set
             setValidEpcs((prev) => new Set([...prev, epc]));
 
-            // EPC exists in API - add it to the table
+            // EPC exists in cache - add it to the table
             setLinens((prev) => {
               const emptyRowIndex = prev.findIndex(
                 (linen) => linen.epc.trim() === ""
               );
 
               if (emptyRowIndex !== -1) {
-                // Use existing empty row
-                return prev.map((linen, i) =>
+                // Use existing empty row and add a new empty row at the end
+                const updated = prev.map((linen, i) =>
                   i === emptyRowIndex
                     ? {
                         ...linen,
@@ -275,8 +201,14 @@ export const useLinenData = (baseUrl, customerId) => {
                       }
                     : linen
                 );
+
+                // Add a new empty row to maintain structure
+                return [
+                  ...updated,
+                  { epc: "", status_id: 1, loading: false, isValidCustomer: true }
+                ];
               } else {
-                // Create new row
+                // No empty row found, append new EPC and add empty row
                 return [
                   ...prev,
                   {
@@ -297,28 +229,144 @@ export const useLinenData = (baseUrl, customerId) => {
                       ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
                       : null,
                   },
+                  { epc: "", status_id: 1, loading: false, isValidCustomer: true }
                 ];
               }
             });
-            console.log(`📋 EPC ${epc} berhasil ditambahkan ke tabel dari API`);
+            console.log(`📋 EPC ${epc} berhasil ditambahkan dari cache`);
           } else {
-            // EPC not found in API - add to cache but don't show in table
+            // Cached data is empty (not found)
             console.log(
-              `❌ EPC ${epc} tidak ditemukan di API, ditambahkan ke cache sebagai tidak ada`
+              `📭 EPC ${epc} ada di cache tapi data kosong, ditandai sebagai tidak ada`
             );
             setNonExistentEpcs((prev) => new Set([...prev, epc]));
           }
-        } else {
-          console.error(`❌ Failed to fetch linen data for EPC: ${epc}`);
-          // Cache the failed response and add to non-existent cache
+          return;
+        }
+
+        // Step 3: EPC not found in cache, need to hit API
+        console.log(
+          `🌐 EPC ${epc} belum ada di cache, mengambil data dari API...`
+        );
+
+        try {
+          const token = await window.authAPI.getToken();
+          console.log(`📡 Calling API for EPC: ${epc}`);
+
+          const response = await fetch(
+            `${baseUrl}/Process/linen_rfid?epc=${encodeURIComponent(epc)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log(`💾 Saving API response to cache for EPC: ${epc}`);
+            // Cache the response regardless of success or failure
+            setEpcCache((prev) => new Map([...prev, [epc, result.data || []]]));
+
+            if (result.success && result.data && result.data.length > 0) {
+              const linenData = result.data[0];
+              console.log(
+                `✅ Found linen data for EPC: ${epc} - ${linenData.linenName}`
+              );
+
+              // Check if the linen belongs to the selected customer
+              const isValidCustomer =
+                !customerId || linenData.customerId === customerId;
+
+              // Add to valid EPCs set
+              setValidEpcs((prev) => new Set([...prev, epc]));
+
+              // EPC exists in API - add it to the table
+              setLinens((prev) => {
+                const emptyRowIndex = prev.findIndex(
+                  (linen) => linen.epc.trim() === ""
+                );
+
+                if (emptyRowIndex !== -1) {
+                  // Use existing empty row and add a new empty row at the end
+                  const updated = prev.map((linen, i) =>
+                    i === emptyRowIndex
+                      ? {
+                          ...linen,
+                          epc: linenData.epc,
+                          customerId: linenData.customerId,
+                          customerName: linenData.customerName,
+                          linenId: linenData.linenId,
+                          linenTypeName: linenData.linenTypeName,
+                          linenName: linenData.linenName,
+                          roomId: linenData.roomId,
+                          roomName: linenData.roomName,
+                          statusId: linenData.statusId,
+                          status: linenData.status,
+                          loading: false,
+                          isValidCustomer: isValidCustomer,
+                          errorMessage: !isValidCustomer
+                            ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                            : null,
+                        }
+                      : linen
+                  );
+
+                  // Add a new empty row to maintain structure
+                  return [
+                    ...updated,
+                    { epc: "", status_id: 1, loading: false, isValidCustomer: true }
+                  ];
+                } else {
+                  // No empty row found, append new EPC and add empty row
+                  return [
+                    ...prev,
+                    {
+                      epc: linenData.epc,
+                      customerId: linenData.customerId,
+                      customerName: linenData.customerName,
+                      linenId: linenData.linenId,
+                      linenTypeName: linenData.linenTypeName,
+                      linenName: linenData.linenName,
+                      roomId: linenData.roomId,
+                      roomName: linenData.roomName,
+                      statusId: linenData.statusId,
+                      status: linenData.status,
+                      status_id: linenData.statusId || 1,
+                      loading: false,
+                      isValidCustomer: isValidCustomer,
+                      errorMessage: !isValidCustomer
+                        ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                        : null,
+                    },
+                    { epc: "", status_id: 1, loading: false, isValidCustomer: true }
+                  ];
+                }
+              });
+              console.log(`📋 EPC ${epc} berhasil ditambahkan ke tabel dari API`);
+            } else {
+              // EPC not found in API - add to cache but don't show in table
+              console.log(
+                `❌ EPC ${epc} tidak ditemukan di API, ditambahkan ke cache sebagai tidak ada`
+              );
+              setNonExistentEpcs((prev) => new Set([...prev, epc]));
+            }
+          } else {
+            console.error(`❌ Failed to fetch linen data for EPC: ${epc}`);
+            // Cache the failed response and add to non-existent cache
+            setEpcCache((prev) => new Map([...prev, [epc, []]]));
+            setNonExistentEpcs((prev) => new Set([...prev, epc]));
+          }
+        } catch (error) {
+          console.error(`❌ Error fetching linen data for EPC: ${epc}`, error);
+          // Cache the error and add to non-existent cache
           setEpcCache((prev) => new Map([...prev, [epc, []]]));
           setNonExistentEpcs((prev) => new Set([...prev, epc]));
         }
-      } catch (error) {
-        console.error(`❌ Error fetching linen data for EPC: ${epc}`, error);
-        // Cache the error and add to non-existent cache
-        setEpcCache((prev) => new Map([...prev, [epc, []]]));
-        setNonExistentEpcs((prev) => new Set([...prev, epc]));
+      } finally {
+        // Always remove from currently processing set when done
+        currentlyProcessing.current.delete(epc);
       }
     },
     [baseUrl, customerId, epcCache, nonExistentEpcs]
