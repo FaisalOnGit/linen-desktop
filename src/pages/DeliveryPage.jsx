@@ -114,14 +114,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
 
     clearAllEPCs();
-    // Also reset the form data
-    setFormData({
-      customerId: "",
-      customerName: "",
+    // Only reset the quantity
+    setFormData((prev) => ({
+      ...prev,
       qty: 0,
-      driverName: "",
-      plateNumber: "",
-    });
+    }));
   };
 
   // Submit handler
