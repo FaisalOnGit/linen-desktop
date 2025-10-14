@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Play, Trash2, Square, Truck } from "lucide-react";
+import { Play, Trash2, Square, Truck, Printer } from "lucide-react";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { useDeliveryData } from "../hooks/useDeliveryData";
+import usePrint from "../hooks/usePrint";
 
 const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const {
@@ -48,6 +49,18 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     fetchCustomers,
     getCustomerById,
   } = useDeliveryData(baseUrl);
+
+  // Print functionality
+  const {
+    selectedDevice,
+    devices,
+    printStatus,
+    isBrowserPrintLoaded,
+    printDeliveryLabel,
+    handleDeviceChange,
+    refreshDevices,
+    checkBrowserPrint,
+  } = usePrint();
 
   // Handle RFID tag scanning
   useEffect(() => {
@@ -267,6 +280,72 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   };
 
+  // Print handler
+  const handlePrint = async () => {
+    if (!formData.customerId) {
+      toast.error("Pilih customer terlebih dahulu!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+
+    if (!formData.driverName.trim()) {
+      toast.error("Nama driver tidak boleh kosong!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+
+    if (!formData.plateNumber.trim()) {
+      toast.error("Nomor plat tidak boleh kosong!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+
+    const validLinens = linens.filter(
+      (linen) =>
+        linen.epc?.trim() &&
+        !linen.isNonExist &&
+        !linen.isDuplicate &&
+        linen.isValidCustomer !== false
+    );
+
+    if (validLinens.length === 0) {
+      toast.error("Minimal harus ada 1 EPC linen yang valid untuk print!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+
+    try {
+      // Generate delivery data for print
+      const deliveryData = {
+        barcode: `DLV${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+        customer: formData.customerName,
+        room: formData.driverName,
+        totalLinen: validLinens.length.toString(),
+        qtyLinen: `${validLinens.length} PCS`,
+      };
+
+      await printDeliveryLabel(deliveryData);
+      toast.success("Print berhasil!", {
+        duration: 3000,
+        icon: "✅",
+      });
+    } catch (error) {
+      console.error("Print error:", error);
+      toast.error(error.message || "Gagal print, coba lagi!", {
+        duration: 4000,
+        icon: "❌",
+      });
+    }
+  };
+
   // Utility functions for styling
   const getStatusColor = (status) => {
     if (!status) return "bg-gray-50 border-gray-300 text-gray-700";
@@ -413,6 +492,35 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   <Trash2 size={14} />
                   <span>Clear All</span>
                 </button>
+
+                {/* Print Button */}
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  disabled={!isBrowserPrintLoaded}
+                  className={`bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm ${
+                    !isBrowserPrintLoaded ? 'bg-gray-400 cursor-not-allowed' : ''
+                  }`}
+                  title="Print label delivery"
+                >
+                  <Printer size={14} />
+                  <span>Print</span>
+                </button>
+
+                {/* Printer Selection */}
+                {devices.length > 0 && (
+                  <select
+                    onChange={(e) => handleDeviceChange(e.target.value)}
+                    defaultValue={selectedDevice?.uid}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {devices.map((device, index) => (
+                      <option key={index} value={device.uid}>
+                        {device.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
@@ -450,6 +558,27 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   ⚠️ Terdapat {getInvalidLinenCount()} tag yang tidak sesuai
                   dengan customer yang dipilih. Tag tersebut tidak akan diproses
                   saat submit.
+                </p>
+              </div>
+            )}
+
+            {/* Print status indicator */}
+            {printStatus && (
+              <div className={`mb-4 p-3 border rounded-lg ${
+                printStatus.includes('Error') || printStatus.includes('gagal')
+                  ? 'bg-red-50 border-red-200'
+                  : printStatus.includes('Print successful') || printStatus.includes('berhasil')
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
+                <p className={`text-sm ${
+                  printStatus.includes('Error') || printStatus.includes('gagal')
+                    ? 'text-red-700'
+                    : printStatus.includes('Print successful') || printStatus.includes('berhasil')
+                    ? 'text-green-700'
+                    : 'text-blue-700'
+                }`}>
+                  🖨️ Printer: {printStatus}
                 </p>
               </div>
             )}

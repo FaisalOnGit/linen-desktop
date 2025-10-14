@@ -3,7 +3,7 @@
   "productName": "OSLA",
   "version": "1.0.0",
   "main": "electron/main.js",
-  "author": "Faisal Rahman",
+  "author": "Nuansa Cerah Informasi",
   "license": "MIT",
   "private": true,
   "scripts": {
