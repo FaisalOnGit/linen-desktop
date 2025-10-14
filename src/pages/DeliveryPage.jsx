@@ -55,11 +55,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     if (!isDeliveryActive) return;
 
     if (deliveryTags && deliveryTags.length > 0) {
-      const latestTag = deliveryTags[deliveryTags.length - 1];
+      console.log(`📡 DeliveryPage: Processing ${deliveryTags.length} tags from RFID`);
 
-      if (latestTag && latestTag.EPC) {
-        processScannedEPC(latestTag.EPC, formData.customerId);
-      }
+      // Process each tag using processScannedEPC
+      deliveryTags.forEach((tag, index) => {
+        if (tag && tag.EPC) {
+          console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
+          processScannedEPC(tag.EPC, formData.customerId);
+        }
+      });
     }
   }, [deliveryTags, isDeliveryActive, processScannedEPC, formData.customerId]);
 
@@ -75,7 +79,9 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    // Convert plate number to uppercase
+    const processedValue = name === 'plateNumber' ? value.toUpperCase() : value;
+    setFormData({ ...formData, [name]: processedValue });
   };
 
   const handleCustomerChange = (selected) => {

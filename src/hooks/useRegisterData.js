@@ -77,19 +77,13 @@ export const useRegisterData = () => {
       return false;
     }
 
-    // Check if EPC already processed
-    if (processedTags.has(epc)) {
-      console.log(`EPC ${epc} already processed`);
-      return false;
-    }
-
-    // Mark this EPC as processed
-    setProcessedTags((prev) => new Set([...prev, epc]));
-
-    // Check if EPC already exists in current linens
+    // Check if EPC already exists in current linens (this is the real check)
     const existingIndex = linens.findIndex((linen) => linen.epc === epc);
 
     if (existingIndex === -1) {
+      // Mark this EPC as processed to prevent duplicate processing in same session
+      setProcessedTags((prev) => new Set([...prev, epc]));
+
       // Add to valid EPCs set (RegisterPage accepts all EPCs)
       setValidEpcs((prev) => new Set([...prev, epc]));
 
@@ -106,11 +100,11 @@ export const useRegisterData = () => {
       console.log(`✅ EPC ${epc} added successfully`);
       return true;
     } else {
-      // EPC already exists
+      // EPC already exists in table
       console.log(`EPC ${epc} already exists in row ${existingIndex + 1}`);
       return false;
     }
-  }, [processedTags, linens, updateLinenField]);
+  }, [linens, updateLinenField]);
 
   // Handle register tags from RFID scanner
   const handleRegisterTags = useCallback((registerTags, isRegisterActive) => {
@@ -118,9 +112,12 @@ export const useRegisterData = () => {
     if (!isRegisterActive) return;
 
     if (registerTags && registerTags.length > 0) {
-      // Process only new tags that haven't been processed
-      registerTags.forEach((tag) => {
+      console.log(`📡 RegisterPage: Processing ${registerTags.length} tags from RFID`);
+
+      // Process each tag using the existing processScannedEPC function
+      registerTags.forEach((tag, index) => {
         if (tag && tag.EPC) {
+          console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
           processScannedEPC(tag.EPC);
         }
       });

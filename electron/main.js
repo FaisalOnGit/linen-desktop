@@ -123,9 +123,12 @@ let connect,
   stopInventory,
   disconnect,
   getTags,
+  getTagsByAntenna,
+  getAllAntennaTags,
   clearTags,
   setPower,
-  getPower;
+  getPower,
+  getInventoryStatus;
 
 function initializeRfidFunctions() {
   try {
@@ -214,6 +217,27 @@ function initializeRfidFunctions() {
       assemblyFile: dllPath,
       typeName: "ZebraLib.RfidWrapper",
       methodName: "GetPower",
+      sync: false,
+    });
+
+    getTagsByAntenna = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "GetTagsByAntenna",
+      sync: false,
+    });
+
+    getAllAntennaTags = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "GetAllAntennaTags",
+      sync: false,
+    });
+
+    getInventoryStatus = edge.func({
+      assemblyFile: dllPath,
+      typeName: "ZebraLib.RfidWrapper",
+      methodName: "GetInventoryStatus",
       sync: false,
     });
 
@@ -521,6 +545,73 @@ ipcMain.handle("rfid-get-power", async (event, { antennaId }) => {
       }
 
       console.log("RFID GetPower Result:", res);
+      resolve(res);
+    });
+  });
+});
+
+ipcMain.handle("rfid-get-tags-by-antenna", async (event, { antennaId }) => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
+  return new Promise((resolve, reject) => {
+    if (!isConnected) {
+      reject(new Error("Not connected to RFID reader"));
+      return;
+    }
+
+    getTagsByAntenna({ antennaId }, (err, res) => {
+      if (err) {
+        console.error("RFID GetTagsByAntenna Error:", err);
+        reject(err);
+        return;
+      }
+
+      console.log("RFID GetTagsByAntenna Result:", res);
+      resolve(res);
+    });
+  });
+});
+
+ipcMain.handle("rfid-get-all-antenna-tags", async () => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
+  return new Promise((resolve, reject) => {
+    if (!isConnected) {
+      reject(new Error("Not connected to RFID reader"));
+      return;
+    }
+
+    getAllAntennaTags(null, (err, res) => {
+      if (err) {
+        console.error("RFID GetAllAntennaTags Error:", err);
+        reject(err);
+        return;
+      }
+
+      console.log("RFID GetAllAntennaTags Result:", res);
+      resolve(res);
+    });
+  });
+});
+
+ipcMain.handle("rfid-get-inventory-status", async () => {
+  if (!rfidInitialized) {
+    throw new Error("RFID not initialized");
+  }
+
+  return new Promise((resolve, reject) => {
+    getInventoryStatus(null, (err, res) => {
+      if (err) {
+        console.error("RFID GetInventoryStatus Error:", err);
+        reject(err);
+        return;
+      }
+
+      console.log("RFID GetInventoryStatus Result:", res);
       resolve(res);
     });
   });

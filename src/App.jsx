@@ -12,6 +12,7 @@ import PrintTestPage from "./pages/PrintTestPage";
 import { TableModeProvider } from "./contexts/TableModeContext";
 import Print from "./pages/Print";
 import DeliveryPage2 from "./pages/Delivery";
+import RfidTestPage from "./pages/RfidTestPage";
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
@@ -50,6 +51,8 @@ const App = () => {
         return <DeliveryPage rfidHook={rfidHook} deliveryType={4} />;
       case "print-test":
         return <PrintTestPage />;
+      case "rfid-test":
+        return <RfidTestPage rfidHook={rfidHook} />;
       default:
         return <LinenCleanPage rfidHook={rfidHook} />;
     }

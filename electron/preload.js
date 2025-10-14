@@ -22,9 +22,12 @@ contextBridge.exposeInMainWorld("rfidAPI", {
   stopInventory: () => ipcRenderer.invoke("rfid-stop-inventory"),
   disconnect: () => ipcRenderer.invoke("rfid-disconnect"),
   getTags: () => ipcRenderer.invoke("rfid-get-tags"),
+  getTagsByAntenna: (antennaId) => ipcRenderer.invoke("rfid-get-tags-by-antenna", { antennaId }),
+  getAllAntennaTags: () => ipcRenderer.invoke("rfid-get-all-antenna-tags"),
   clearTags: () => ipcRenderer.invoke("rfid-clear-tags"),
   setPower: (config) => ipcRenderer.invoke("rfid-set-power", config),
   getPower: (config) => ipcRenderer.invoke("rfid-get-power", config),
+  getInventoryStatus: () => ipcRenderer.invoke("rfid-get-inventory-status"),
   getStatus: () => ipcRenderer.invoke("rfid-status"),
   onInventoryStarted: (callback) =>
     ipcRenderer.on("rfid-inventory-started", callback),

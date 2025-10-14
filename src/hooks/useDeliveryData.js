@@ -33,10 +33,21 @@ export const useDeliveryData = (baseUrl) => {
   // Cache for linen data to avoid repeated API calls
   const linenCache = useRef(new Map());
 
+  // Update linen field by index
+  const updateLinenField = useCallback((index, field, value) => {
+    setLinens((prev) => {
+      const updatedLinens = [...prev];
+      updatedLinens[index] = { ...updatedLinens[index], [field]: value };
+      return updatedLinens;
+    });
+  }, []);
+
   // Process scanned EPC for delivery flow
   const processScannedEPC = useCallback(
     async (epc, customerId) => {
       if (!epc) return false;
+
+      console.log(`🔍 Processing Delivery EPC: ${epc}`);
 
       // Validate EPC format
       if (epc.length < 8 || !/^[0-9A-Fa-f]+$/.test(epc)) {
@@ -44,58 +55,55 @@ export const useDeliveryData = (baseUrl) => {
         return false;
       }
 
-      // Check if EPC already processed
-      if (processedTags.has(epc)) {
-        console.log(`EPC ${epc} already processed`);
-        return false;
-      }
-
-      // Check if EPC already exists in current linens
+      // Check if EPC already exists in current linens (this is the real check)
       const existingIndex = linens.findIndex((linen) => linen.epc === epc);
-      if (existingIndex !== -1) {
+
+      if (existingIndex === -1) {
+        // Mark this EPC as processed to prevent duplicate processing in same session
+        setProcessedTags((prev) => new Set([...prev, epc]));
+
+        // Find first empty row or add new row
+        const emptyRowIndex = linens.findIndex((linen) => linen.epc.trim() === "");
+        const targetIndex = emptyRowIndex !== -1 ? emptyRowIndex : linens.length;
+
+        if (emptyRowIndex === -1) {
+          // Add new row
+          setLinens((prev) => [
+            ...prev,
+            {
+              epc,
+              linenName: "",
+              roomId: "",
+              roomName: "",
+              buildingName: "",
+              isValidCustomer: null,
+              status: null,
+              isNonExist: false,
+              isDuplicate: false,
+              isProcessed: true,
+              loading: true,
+              errorMessage: null,
+            },
+          ]);
+        } else {
+          // Update empty row
+          updateLinenField(targetIndex, "epc", epc);
+          updateLinenField(targetIndex, "isProcessed", true);
+          updateLinenField(targetIndex, "loading", true);
+        }
+
+        // Validate EPC against API
+        await validateEPC(epc, targetIndex, customerId);
+
+        console.log(`✅ EPC ${epc} added successfully`);
+        return true;
+      } else {
+        // EPC already exists in table
         console.log(`EPC ${epc} already exists in row ${existingIndex + 1}`);
         return false;
       }
-
-      // Mark as processed
-      setProcessedTags((prev) => new Set([...prev, epc]));
-
-      // Find first empty row or add new row
-      const emptyRowIndex = linens.findIndex((linen) => linen.epc.trim() === "");
-      const targetIndex = emptyRowIndex !== -1 ? emptyRowIndex : linens.length;
-
-      if (emptyRowIndex === -1) {
-        // Add new row
-        setLinens((prev) => [
-          ...prev,
-          {
-            epc,
-            linenName: "",
-            roomId: "",
-            roomName: "",
-            buildingName: "",
-            isValidCustomer: null,
-            status: null,
-            isNonExist: false,
-            isDuplicate: false,
-            isProcessed: true,
-            loading: true,
-            errorMessage: null,
-          },
-        ]);
-      } else {
-        // Update empty row
-        updateLinenField(targetIndex, "epc", epc);
-        updateLinenField(targetIndex, "isProcessed", true);
-        updateLinenField(targetIndex, "loading", true);
-      }
-
-      // Validate EPC against API
-      await validateEPC(epc, targetIndex, customerId);
-
-      return true;
     },
-    [processedTags, linens]
+    [linens, updateLinenField]
   );
 
   // Validate EPC against API
@@ -384,15 +392,6 @@ export const useDeliveryData = (baseUrl) => {
     linenCache.current.clear();
 
     console.log("✅ All delivery EPC data cleared");
-  }, []);
-
-  // Update linen field by index
-  const updateLinenField = useCallback((index, field, value) => {
-    setLinens((prev) => {
-      const updatedLinens = [...prev];
-      updatedLinens[index] = { ...updatedLinens[index], [field]: value };
-      return updatedLinens;
-    });
   }, []);
 
   // Get count of valid linens

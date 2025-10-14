@@ -10,6 +10,7 @@ import {
   Package,
   RefreshCw,
   RotateCcw,
+  TestTube,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
 
@@ -150,6 +151,13 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               icon: Settings,
               size: "large",
               description: "Configure RFID reader",
+            },
+            {
+              id: "rfid-test",
+              label: "RFID\nTest",
+              icon: TestTube,
+              size: "large",
+              description: "Test all RFID functions",
             },
             // {
             //   id: "print-test",

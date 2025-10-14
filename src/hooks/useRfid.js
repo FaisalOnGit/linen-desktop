@@ -430,12 +430,13 @@ export const useRfid = () => {
       intervalRefs.current.register = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
-          // Filter out duplicate EPCs to prevent false readings
-          const uniqueTags = tagsData.filter(
-            (tag, index, self) =>
-              index === self.findIndex((t) => t.EPC === tag.EPC)
-          );
-          setRegisterTags(uniqueTags);
+
+          // Only add new tags that don't exist in current registerTags
+          setRegisterTags(prevTags => {
+            const existingEpcSet = new Set(prevTags.map(tag => tag.EPC));
+            const newTags = tagsData.filter(tag => !existingEpcSet.has(tag.EPC));
+            return [...prevTags, ...newTags];
+          });
         } catch (err) {
           console.error("Error fetching register tags:", err);
         }
@@ -602,15 +603,23 @@ export const useRfid = () => {
       intervalRefs.current.delivery = setInterval(async () => {
         try {
           const tagsData = await window.rfidAPI.getTags();
-          const enrichedTags = tagsData.map((tag) => ({
-            ...tag,
-            linenName: "Sprei",
-            customerName: "RS NCI",
-            room: "Delivery Area",
-            status: "Siap Kirim",
-            deliveryDate: new Date().toISOString().split("T")[0],
-          }));
-          setDeliveryTags(enrichedTags);
+
+          // Only add new tags that don't exist in current deliveryTags
+          setDeliveryTags(prevTags => {
+            const existingEpcSet = new Set(prevTags.map(tag => tag.EPC));
+            const newTags = tagsData.filter(tag => !existingEpcSet.has(tag.EPC));
+
+            const enrichedTags = newTags.map((tag) => ({
+              ...tag,
+              linenName: "Sprei",
+              customerName: "RS NCI",
+              room: "Delivery Area",
+              status: "Siap Kirim",
+              deliveryDate: new Date().toISOString().split("T")[0],
+            }));
+
+            return [...prevTags, ...enrichedTags];
+          });
         } catch (err) {
           console.error("Error fetching delivery tags:", err);
         }
