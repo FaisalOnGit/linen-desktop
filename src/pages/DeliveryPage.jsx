@@ -55,9 +55,12 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     if (!isDeliveryActive) return;
 
     if (deliveryTags && deliveryTags.length > 0) {
-      console.log(`📡 DeliveryPage: Processing ${deliveryTags.length} tags from RFID`);
+      console.log(
+        `📡 DeliveryPage: Processing ${deliveryTags.length} tags from RFID`
+      );
 
       // Process each tag using processScannedEPC
+      // Let the hook handle duplicate detection internally
       deliveryTags.forEach((tag, index) => {
         if (tag && tag.EPC) {
           console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
@@ -65,7 +68,12 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         }
       });
     }
-  }, [deliveryTags, isDeliveryActive, processScannedEPC, formData.customerId]);
+  }, [
+    deliveryTags,
+    isDeliveryActive,
+    processScannedEPC,
+    formData.customerId,
+  ]);
 
   // Update linen count when linens change
   useEffect(() => {
@@ -80,7 +88,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     // Convert plate number to uppercase
-    const processedValue = name === 'plateNumber' ? value.toUpperCase() : value;
+    const processedValue = name === "plateNumber" ? value.toUpperCase() : value;
     setFormData({ ...formData, [name]: processedValue });
   };
 
@@ -420,7 +428,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : isDeliveryActive
                     ? "bg-red-600 hover:bg-red-700"
-                    : "bg-primary hover:bg-blue-700"
+                    : "bg-blue-600 hover:bg-blue-700"
                 }`}
                 disabled={!isRfidAvailable}
               >
@@ -469,92 +477,98 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {linens.map((linen, index) => (
-                    <tr
-                      key={index}
-                      className={`${getRowColor(
-                        linen
-                      )} transition-colors duration-200`}
-                    >
-                      <td className="px-4 py-3 text-sm text-gray-700 border-b">
-                        {index + 1}
-                        {linen.epc && (
-                          <span className="ml-2 text-xs text-green-600">
-                            ✓ Scanned
-                          </span>
-                        )}
-                        {linen.isValidCustomer === false && (
-                          <span className="ml-2 text-xs text-red-600">
-                            ✗ Invalid
-                          </span>
-                        )}
-                        {linen.isNonExist && (
-                          <span className="ml-2 text-xs text-red-600">
-                            ✗ Not Found
-                          </span>
-                        )}
-                        {linen.isDuplicate && (
-                          <span className="ml-2 text-xs text-red-600">
-                            ✗ Duplicate
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
-                        <input
-                          type="text"
-                          value={linen.epc}
-                          readOnly
-                          placeholder="Auto-filled dari scan RFID"
-                          className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
-                            linen.isValidCustomer === false ||
-                            linen.isNonExist ||
-                            linen.isDuplicate
-                              ? "border-red-300 bg-red-50"
-                              : linen.epc
-                              ? "bg-green-50 border-green-300"
-                              : "border-gray-300"
-                          }`}
-                        />
-                      </td>
-                      <td className="px-4 py-3 border-b">
-                        {linen.loading ? (
-                          <div className="flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            <span className="ml-2 text-xs text-gray-500">
-                              Loading...
-                            </span>
-                          </div>
-                        ) : (
-                          <div
-                            className={`px-2 py-1 rounded text-xs font-medium text-center ${getStatusColor(
-                              linen.status
-                            )}`}
-                          >
-                            {linen.status || "Unknown"}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
-                        {linen.isValidCustomer === false &&
-                        linen.errorMessage ? (
-                          <div className="text-xs text-red-600">
-                            {linen.errorMessage}
-                          </div>
-                        ) : linen.customerName ? (
-                          <div className="text-xs text-green-600">
-                            {linen.customerName}
-                          </div>
-                        ) : (
-                          <div className="text-xs text-gray-400">-</div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {linens
+                    .filter((linen) => linen.epc?.trim()) // Only show rows with EPC data
+                    .map((linen, filteredIndex) => {
+                      // Use the filtered index for row numbering
+                      return (
+                        <tr
+                          key={linen.epc}
+                          className={`${getRowColor(
+                            linen
+                          )} transition-colors duration-200`}
+                        >
+                          <td className="px-4 py-3 text-sm text-gray-700 border-b">
+                            {filteredIndex + 1}
+                            {linen.epc && (
+                              <span className="ml-2 text-xs text-green-600">
+                                ✓ Scanned
+                              </span>
+                            )}
+                            {linen.isValidCustomer === false && (
+                              <span className="ml-2 text-xs text-red-600">
+                                ✗ Invalid
+                              </span>
+                            )}
+                            {linen.isNonExist && (
+                              <span className="ml-2 text-xs text-red-600">
+                                ✗ Not Found
+                              </span>
+                            )}
+                            {linen.isDuplicate && (
+                              <span className="ml-2 text-xs text-red-600">
+                                ✗ Duplicate
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 border-b">
+                            <input
+                              type="text"
+                              value={linen.epc}
+                              readOnly
+                              placeholder="Auto-filled dari scan RFID"
+                              className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
+                                linen.isValidCustomer === false ||
+                                linen.isNonExist ||
+                                linen.isDuplicate
+                                  ? "border-red-300 bg-red-50"
+                                  : linen.epc
+                                  ? "bg-green-50 border-green-300"
+                                  : "border-gray-300"
+                              }`}
+                            />
+                          </td>
+                          <td className="px-4 py-3 border-b">
+                            {linen.loading ? (
+                              <div className="flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                <span className="ml-2 text-xs text-gray-500">
+                                  Loading...
+                                </span>
+                              </div>
+                            ) : (
+                              <div
+                                className={`px-2 py-1 rounded text-xs font-medium text-center ${getStatusColor(
+                                  linen.status
+                                )}`}
+                              >
+                                {linen.status || "Unknown"}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 border-b">
+                            {linen.isValidCustomer === false &&
+                            linen.errorMessage ? (
+                              <div className="text-xs text-red-600">
+                                {linen.errorMessage}
+                              </div>
+                            ) : linen.customerName ? (
+                              <div className="text-xs text-green-600">
+                                {linen.customerName}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400">-</div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
           </div>
 
+          {/* Submit Button */}
           <div>
             <button
               onClick={handleSubmit}
@@ -570,7 +584,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 !formData.plateNumber.trim() ||
                 getValidLinenCount() === 0
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-primary hover:bg-blue-400 text-white"
+                  : "bg-blue-600 hover:bg-blue-400 text-white"
               }`}
             >
               <Truck size={16} />
