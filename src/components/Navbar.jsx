@@ -152,13 +152,13 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               size: "large",
               description: "Configure RFID reader",
             },
-            {
-              id: "rfid-test",
-              label: "RFID\nTest",
-              icon: TestTube,
-              size: "large",
-              description: "Test all RFID functions",
-            },
+            // {
+            //   id: "rfid-test",
+            //   label: "RFID\nTest",
+            //   icon: TestTube,
+            //   size: "large",
+            //   description: "Test all RFID functions",
+            // },
             // {
             //   id: "print-test",
             //   label: "Print\nTest",

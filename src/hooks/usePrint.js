@@ -93,24 +93,36 @@ const usePrint = () => {
   };
 
   const generateDeliveryZPL = (deliveryData) => {
+    // Generate current date in dd/MM/yyyy HH:mm format
+    const currentDate = new Date()
+      .toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+      .replace(",", "");
+
     return `^XA
-^LL600
-^FO180,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
-^FO310,60^A0N,28,28^FD${deliveryData.deliveryType || 'Delivery Linen'}^FS
-^FO310,95^A0N,35,35^FD${deliveryData.deliveryTitle || 'DELIVERY'}^FS
-^FO200,150^BY3^BCN,80,Y,N,N^FD${deliveryData.barcode}^FS
-^FO150,270^A0N,25,25^FDDetail Pengiriman:^FS
-^FO150,305^GB400,2,2^FS
-^FO150,330^A0N,22,22^FDKlien:^FS
-^FO300,330^A0N,22,22^FD${deliveryData.customer}^FS
-^FO150,365^A0N,22,22^FD${deliveryData.driverLabel || 'Driver'}:^FS
-^FO300,365^A0N,22,22^FD${deliveryData.room}^FS
-^FO150,400^A0N,22,22^FDTotal Linen:^FS
-^FO300,400^A0N,22,22^FD${deliveryData.totalLinen}^FS
-^FO150,435^A0N,22,22^FDQty Linen:^FS
-^FO300,435^A0N,22,22^FD${deliveryData.qtyLinen}^FS
-^FO150,470^GB400,2,2^FS
-^FO250,490^A0N,20,20^FDTerima kasih^FS
+^LL700
+^FO200,20^BY3^BCN,60,Y,N,N^FD${deliveryData.deliveryNumber || "N/A"}^FS
+^FO200,130^A0N,30,30^FDPT JALIN MITRA NUSANTARA^FS
+^FO250,160^A0N,20,20^FD(Obsesiman)^FS
+^FO200,190^A0N,28,28^FD${deliveryData.deliveryType || "Delivery Linen"}^FS
+^FO100,240^A0N,22,22^FDKlien: ${deliveryData.customer}^FS
+^FO100,270^A0N,20,20^FD${currentDate}^FS
+^FO50,300^GB400,2,2^FS
+^FO100,320^A0N,22,22^FDTotal Linen Terbaca: ${deliveryData.totalLinen}^FS
+^FO100,350^A0N,22,22^FDTotal Linen Transaksi: ${deliveryData.totalLinen}^FS
+^FO100,380^A0N,22,22^FDNama Linen: ${deliveryData.linenTypes || "-"}^FS
+^FO100,410^GB400,2,2^FS
+^FO100,430^A0N,22,22^FD${deliveryData.driverLabel || "Driver"}: ${
+      deliveryData.room
+    }^FS
+^FO100,460^A0N,22,22^FDNo. Polisi: ${deliveryData.plateNumber || ""}^FS
+^FO100,490^GB400,2,2^FS
+^FO200,530^A0N,20,20^FDTerima kasih^FS
 ^XZ`;
   };
 

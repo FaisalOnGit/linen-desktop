@@ -92,12 +92,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         });
       }
     }
-  }, [
-    deliveryTags,
-    isDeliveryActive,
-    processScannedEPC,
-    formData.customerId,
-  ]);
+  }, [deliveryTags, isDeliveryActive, processScannedEPC, formData.customerId]);
 
   // Update linen count when linens change
   useEffect(() => {
@@ -155,7 +150,9 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   };
 
   const handleClearAll = () => {
-    console.log("🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()");
+    console.log(
+      "🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()"
+    );
 
     try {
       // Stop RFID scanning first to prevent immediate re-population
@@ -325,40 +322,65 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
       const successMessage = result.message || "Proses delivery berhasil!";
 
+      // Extract delivery number from API response
+      const deliveryNumber = result.data?.deliveryNumber || "";
+
+      // Get linen types from existing data in the hook (no need for extra API calls)
+      let linenTypes = "Berbagai Jenis";
+      try {
+        // Extract unique linen names from the existing linens data
+        const allLinenNames = validLinens
+          .map((linen) => linen.linenName)
+          .filter((name) => name && name.trim());
+
+        // Get unique linen names
+        const uniqueLinenNames = [...new Set(allLinenNames)];
+        if (uniqueLinenNames.length > 0) {
+          linenTypes = uniqueLinenNames.join(", ");
+        }
+
+        console.log("📋 Extracted linen types from existing data:", linenTypes);
+      } catch (error) {
+        console.error("Error extracting linen types:", error);
+        // Keep default value if extraction fails
+      }
+
       // Store delivery data for printing
       const deliveryData = {
-        barcode: `DLV${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+        deliveryNumber: deliveryNumber,
         customer: formData.customerName,
         room: formData.driverName,
         totalLinen: validLinens.length.toString(),
-        qtyLinen: `${validLinens.length} PCS`,
+        plateNumber: formData.plateNumber,
         deliveryType: currentDeliveryType.title,
-        deliveryTitle: currentDeliveryType.title.toUpperCase().replace('PENGIRIMAN ', ''),
-        driverLabel: 'Driver',
+        driverLabel: "Driver",
+        linenTypes: linenTypes,
       };
 
       setLastDeliveryData(deliveryData);
       setDeliverySubmitted(true);
-
-      // Use rfidHook.clearAllData() for complete state reset after delivery
-      console.log("🗑️ Clearing all RFID data after successful delivery...");
-      if (rfidHook && rfidHook.clearAllData) {
-        rfidHook.clearAllData();
-      }
-
-      // Stop scanning if active
-      if (isDeliveryActive) {
-        stopDelivery();
-      }
 
       toast.success(successMessage, {
         duration: 4000,
         icon: "✅",
       });
 
-      // Auto-print after successful delivery
+      // Auto-print after successful delivery (wait for state to update)
       setTimeout(() => {
         handlePrint();
+      }, 1500);
+
+      // Use rfidHook.clearAllData() for complete state reset after delivery
+      setTimeout(() => {
+        console.log("🗑️ Clearing all RFID data after successful delivery...");
+        if (rfidHook && rfidHook.clearAllData) {
+          rfidHook.clearAllData();
+        }
+
+        // Stop scanning if active
+        if (isDeliveryActive) {
+          stopDelivery();
+        }
       }, 1000);
     } catch (error) {
       console.error("Error submit:", error);
@@ -575,9 +597,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   onClick={handlePrint}
                   disabled={!isBrowserPrintLoaded || !deliverySubmitted}
                   className={`bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm ${
-                    !isBrowserPrintLoaded || !deliverySubmitted ? 'bg-gray-400 cursor-not-allowed' : ''
+                    !isBrowserPrintLoaded || !deliverySubmitted
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : ""
                   }`}
-                  title={deliverySubmitted ? "Print label delivery" : "Submit delivery first to enable printing"}
+                  title={
+                    deliverySubmitted
+                      ? "Print label delivery"
+                      : "Submit delivery first to enable printing"
+                  }
                 >
                   <Printer size={14} />
                   <span>Print</span>
@@ -634,27 +662,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   ⚠️ Terdapat {getInvalidLinenCount()} tag yang tidak sesuai
                   dengan customer yang dipilih. Tag tersebut tidak akan diproses
                   saat submit.
-                </p>
-              </div>
-            )}
-
-            {/* Print status indicator */}
-            {printStatus && (
-              <div className={`mb-4 p-3 border rounded-lg ${
-                printStatus.includes('Error') || printStatus.includes('gagal')
-                  ? 'bg-red-50 border-red-200'
-                  : printStatus.includes('Print successful') || printStatus.includes('berhasil')
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-blue-50 border-blue-200'
-              }`}>
-                <p className={`text-sm ${
-                  printStatus.includes('Error') || printStatus.includes('gagal')
-                    ? 'text-red-700'
-                    : printStatus.includes('Print successful') || printStatus.includes('berhasil')
-                    ? 'text-green-700'
-                    : 'text-blue-700'
-                }`}>
-                  🖨️ Printer: {printStatus}
                 </p>
               </div>
             )}
