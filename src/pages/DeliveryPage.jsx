@@ -330,6 +330,9 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         room: formData.driverName,
         totalLinen: validLinens.length.toString(),
         qtyLinen: `${validLinens.length} PCS`,
+        deliveryType: currentDeliveryType.title,
+        deliveryTitle: currentDeliveryType.title.toUpperCase().replace('PENGIRIMAN ', ''),
+        driverLabel: 'Driver',
       };
 
       await printDeliveryLabel(deliveryData);

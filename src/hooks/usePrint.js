@@ -96,14 +96,14 @@ const usePrint = () => {
     return `^XA
 ^LL600
 ^FO180,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
-^FO310,60^A0N,28,28^FDDelivery Linen^FS
-^FO310,95^A0N,35,35^FDDELIVERY^FS
+^FO310,60^A0N,28,28^FD${deliveryData.deliveryType || 'Delivery Linen'}^FS
+^FO310,95^A0N,35,35^FD${deliveryData.deliveryTitle || 'DELIVERY'}^FS
 ^FO200,150^BY3^BCN,80,Y,N,N^FD${deliveryData.barcode}^FS
 ^FO150,270^A0N,25,25^FDDetail Pengiriman:^FS
 ^FO150,305^GB400,2,2^FS
 ^FO150,330^A0N,22,22^FDKlien:^FS
 ^FO300,330^A0N,22,22^FD${deliveryData.customer}^FS
-^FO150,365^A0N,22,22^FDDriver:^FS
+^FO150,365^A0N,22,22^FD${deliveryData.driverLabel || 'Driver'}:^FS
 ^FO300,365^A0N,22,22^FD${deliveryData.room}^FS
 ^FO150,400^A0N,22,22^FDTotal Linen:^FS
 ^FO300,400^A0N,22,22^FD${deliveryData.totalLinen}^FS
