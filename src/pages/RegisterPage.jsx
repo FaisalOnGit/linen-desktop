@@ -93,11 +93,66 @@ const RegisterPage = ({ rfidHook }) => {
   };
 
   const handleClearAll = () => {
-    // Stop RFID scanning first to prevent immediate re-population
-    if (isRegisterActive) {
-      stopRegister();
+    console.log("🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()");
+
+    try {
+      // Stop RFID scanning first to prevent immediate re-population
+      if (isRegisterActive) {
+        console.log("🛑 Stopping RFID scan to prevent re-population");
+        stopRegister();
+      }
+
+      // Use rfidHook.clearAllData() like tab switching for complete state reset
+      console.log("🗑️ Clearing all RFID data using rfidHook.clearAllData()...");
+      if (rfidHook && rfidHook.clearAllData) {
+        rfidHook.clearAllData();
+      }
+
+      // Clear all EPC data using the hook
+      console.log("🗑️ Clearing all EPC data...");
+      clearAllEPCs();
+
+      // Reset form data completely (like tab switching) - keep customer and description
+      console.log("🔄 Resetting form data completely...");
+      setFormData({
+        customerId: formData.customerId, // Keep customer selection
+        customerName: formData.customerName, // Keep customer name
+        linenId: "",
+        rfidRegisterDescription: formData.rfidRegisterDescription, // Keep description
+      });
+
+      // Force multiple state updates to ensure complete clearing
+      setTimeout(() => {
+        console.log("🔄 Double-checking and clearing any remaining state...");
+        clearAllEPCs(); // Call again to be sure
+
+        // Double-check rfidHook data clearing
+        if (rfidHook && rfidHook.clearAllData) {
+          rfidHook.clearAllData();
+        }
+      }, 50);
+
+      setTimeout(() => {
+        console.log("🔄 Final state cleanup...");
+        clearAllEPCs();
+
+        // Final rfidHook data clearing
+        if (rfidHook && rfidHook.clearAllData) {
+          rfidHook.clearAllData();
+        }
+      }, 200);
+
+      toast.success("Semua data registrasi berhasil dibersihkan!", {
+        duration: 2000,
+        icon: "✅",
+      });
+    } catch (error) {
+      console.error("❌ Error clearing all data:", error);
+      toast.error("Gagal membersihkan data!", {
+        duration: 3000,
+        icon: "❌",
+      });
     }
-    clearAllEPCs();
   };
 
   // Submit handler
@@ -153,6 +208,12 @@ const RegisterPage = ({ rfidHook }) => {
         rfidRegisterDescription: "",
       });
 
+      // Use rfidHook.clearAllData() for complete state reset
+      console.log("🗑️ Clearing all RFID data after successful register...");
+      if (rfidHook && rfidHook.clearAllData) {
+        rfidHook.clearAllData();
+      }
+
       // Clear all EPC data using the hook
       clearAllEPCs();
 
@@ -192,10 +253,20 @@ const RegisterPage = ({ rfidHook }) => {
       return;
     }
 
-    if (isRegisterActive) {
-      stopRegister();
-    } else {
-      startRegister();
+    try {
+      if (isRegisterActive) {
+        console.log("🛑 Stopping register scan");
+        stopRegister();
+      } else {
+        console.log("▶️ Starting register scan");
+        startRegister();
+      }
+    } catch (error) {
+      console.error("❌ Error toggling register scan:", error);
+      toast.error("Gagal mengontrol scan register!", {
+        duration: 3000,
+        icon: "❌",
+      });
     }
   };
 

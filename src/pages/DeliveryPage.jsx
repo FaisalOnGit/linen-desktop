@@ -155,22 +155,76 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   };
 
   const handleClearAll = () => {
-    console.log("🔘 Clear All button clicked");
+    console.log("🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()");
 
-    // Stop RFID scanning first to prevent immediate re-population
-    if (isDeliveryActive) {
-      console.log("🛑 Stopping RFID scan to prevent re-population");
-      stopDelivery();
+    try {
+      // Stop RFID scanning first to prevent immediate re-population
+      if (isDeliveryActive) {
+        console.log("🛑 Stopping RFID scan to prevent re-population");
+        stopDelivery();
+      }
+
+      // Use rfidHook.clearAllData() like tab switching for complete state reset
+      console.log("🗑️ Clearing all RFID data using rfidHook.clearAllData()...");
+      if (rfidHook && rfidHook.clearAllData) {
+        rfidHook.clearAllData();
+      }
+
+      // Clear all EPC data using the hook
+      console.log("🗑️ Clearing all EPC data...");
+      clearAllEPCs();
+
+      // Reset form data completely (like tab switching) - keep customer, driver, plate
+      console.log("🔄 Resetting form data completely...");
+      setFormData((prev) => ({
+        ...prev,
+        qty: 0,
+      }));
+
+      // Reset delivery submission state
+      setDeliverySubmitted(false);
+      setLastDeliveryData(null);
+
+      // Force multiple state updates to ensure complete clearing
+      setTimeout(() => {
+        console.log("🔄 Double-checking and clearing any remaining state...");
+        clearAllEPCs(); // Call again to be sure
+
+        // Double-check rfidHook data clearing
+        if (rfidHook && rfidHook.clearAllData) {
+          rfidHook.clearAllData();
+        }
+
+        // Reset delivery submission state again
+        setDeliverySubmitted(false);
+        setLastDeliveryData(null);
+      }, 50);
+
+      setTimeout(() => {
+        console.log("🔄 Final state cleanup...");
+        clearAllEPCs();
+
+        // Final rfidHook data clearing
+        if (rfidHook && rfidHook.clearAllData) {
+          rfidHook.clearAllData();
+        }
+
+        // Final delivery submission state reset
+        setDeliverySubmitted(false);
+        setLastDeliveryData(null);
+      }, 200);
+
+      toast.success("Semua data delivery berhasil dibersihkan!", {
+        duration: 2000,
+        icon: "✅",
+      });
+    } catch (error) {
+      console.error("❌ Error clearing all data:", error);
+      toast.error("Gagal membersihkan data!", {
+        duration: 3000,
+        icon: "❌",
+      });
     }
-
-    clearAllEPCs();
-    // Reset the quantity and delivery submission state
-    setFormData((prev) => ({
-      ...prev,
-      qty: 0,
-    }));
-    setDeliverySubmitted(false);
-    setLastDeliveryData(null);
   };
 
   // Submit handler
@@ -285,6 +339,12 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
       setLastDeliveryData(deliveryData);
       setDeliverySubmitted(true);
+
+      // Use rfidHook.clearAllData() for complete state reset after delivery
+      console.log("🗑️ Clearing all RFID data after successful delivery...");
+      if (rfidHook && rfidHook.clearAllData) {
+        rfidHook.clearAllData();
+      }
 
       // Stop scanning if active
       if (isDeliveryActive) {

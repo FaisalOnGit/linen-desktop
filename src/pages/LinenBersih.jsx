@@ -48,25 +48,52 @@ const LinenCleanPage = ({ rfidHook }) => {
 
     if (linenBersihTags && linenBersihTags.length > 0) {
       console.log(`📡 LinenBersihPage: Processing ${linenBersihTags.length} tags from RFID`);
+      console.log("🔍 Current processedTags:", Array.from(processedTags));
+      console.log("🔍 Current linens in table:", linens.length);
 
-      // Get current EPCs in table to prevent duplicates
-      const currentEpcs = new Set(linens.filter(l => l.epc?.trim()).map(l => l.epc));
+      try {
+        // Get current EPCs in table to prevent duplicates
+        const currentEpcs = new Set(linens.filter(l => l.epc?.trim()).map(l => l.epc));
+        console.log("🔍 Current EPCs in table:", Array.from(currentEpcs));
 
-      // Process each tag using processScannedEPC
-      linenBersihTags.forEach((tag, index) => {
-        if (tag && tag.EPC) {
-          // Skip if EPC already exists in table
-          if (currentEpcs.has(tag.EPC)) {
-            console.log(`⚠️ Skipping duplicate EPC ${tag.EPC} (index ${index})`);
-            return;
+        // Process each tag using processScannedEPC
+        linenBersihTags.forEach((tag, index) => {
+          if (tag && tag.EPC) {
+            // Enhanced validation - multiple checks
+            const epc = tag.EPC.trim();
+
+            // Skip if EPC already exists in table
+            if (currentEpcs.has(epc)) {
+              console.log(`⚠️ Skipping duplicate EPC ${epc} (already in table)`);
+              return;
+            }
+
+            // Skip if EPC is in processed tags
+            if (processedTags.has(epc)) {
+              console.log(`⚠️ Skipping already processed EPC ${epc} (in processedTags)`);
+              return;
+            }
+
+            // Additional safety check: only process if we have less than 1000 items (prevent memory issues)
+            if (processedTags.size > 1000) {
+              console.warn("⚠️ Processed tags size too large, clearing...");
+              setProcessedTags(new Set());
+              return;
+            }
+
+            console.log(`🔍 Processing new EPC ${epc} (index ${index})`);
+            processScannedEPC(epc);
           }
-
-          console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
-          processScannedEPC(tag.EPC);
-        }
-      });
+        });
+      } catch (error) {
+        console.error("❌ Error processing RFID tags:", error);
+        toast.error("Gagal memproses tag RFID!", {
+          duration: 3000,
+          icon: "❌",
+        });
+      }
     }
-  }, [linenBersihTags, isLinenBersihActive, processScannedEPC, linens]);
+  }, [linenBersihTags, isLinenBersihActive, processScannedEPC, linens, processedTags]);
 
   // Update linen count when linens change
   useEffect(() => {
@@ -108,23 +135,70 @@ const LinenCleanPage = ({ rfidHook }) => {
   };
 
   const handleClearAll = () => {
-    console.log("🔘 Clear All button clicked");
+    console.log("🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()");
 
-    // Stop RFID scanning first to prevent immediate re-population
-    if (isLinenBersihActive) {
-      console.log("🛑 Stopping RFID scan to prevent re-population");
-      stopLinenBersih();
-    }
+    try {
+      // Stop RFID scanning first to prevent immediate re-population
+      if (isLinenBersihActive) {
+        console.log("🛑 Stopping RFID scan to prevent re-population");
+        stopLinenBersih();
+      }
 
-    clearAllEPCs();
-    // Also reset the linen quantity in form data
-    setFormData((prev) => {
-      console.log("🔄 Resetting form data:", { ...prev, linenQty: 0 });
-      return {
-        ...prev,
+      // Use rfidHook.clearAllData() like tab switching for complete state reset
+      console.log("🗑️ Clearing all RFID data using rfidHook.clearAllData()...");
+      if (rfidHook && rfidHook.clearAllData) {
+        rfidHook.clearAllData();
+      }
+
+      // Clear all EPC data using the hook
+      console.log("🗑️ Clearing all EPC data...");
+      clearAllEPCs();
+
+      // Clear processed tags to prevent re-appearance
+      console.log("🗑️ Clearing processed tags...");
+      setProcessedTags(new Set());
+
+      // Reset form data completely (like tab switching)
+      console.log("🔄 Resetting form data completely...");
+      setFormData({
+        customerId: formData.customerId, // Keep customer selection
+        customerName: formData.customerName, // Keep customer name
         linenQty: 0,
-      };
-    });
+      });
+
+      // Force multiple state updates to ensure complete clearing
+      setTimeout(() => {
+        console.log("🔄 Double-checking and clearing any remaining state...");
+        setProcessedTags(new Set());
+        clearAllEPCs(); // Call again to be sure
+
+        // Double-check rfidHook data clearing
+        if (rfidHook && rfidHook.clearAllData) {
+          rfidHook.clearAllData();
+        }
+      }, 50);
+
+      setTimeout(() => {
+        console.log("🔄 Final state cleanup...");
+        setProcessedTags(new Set());
+
+        // Final rfidHook data clearing
+        if (rfidHook && rfidHook.clearAllData) {
+          rfidHook.clearAllData();
+        }
+      }, 200);
+
+      toast.success("Semua data linen berhasil dibersihkan!", {
+        duration: 2000,
+        icon: "✅",
+      });
+    } catch (error) {
+      console.error("❌ Error clearing all data:", error);
+      toast.error("Gagal membersihkan data!", {
+        duration: 3000,
+        icon: "❌",
+      });
+    }
   };
 
   // Submit handler
@@ -208,8 +282,17 @@ const LinenCleanPage = ({ rfidHook }) => {
         linenQty: 0,
       });
 
+      // Use rfidHook.clearAllData() for complete state reset
+      console.log("🗑️ Clearing all RFID data after successful submit...");
+      if (rfidHook && rfidHook.clearAllData) {
+        rfidHook.clearAllData();
+      }
+
       // Clear all EPC data using the hook
       clearAllEPCs();
+
+      // Also clear processed tags to prevent re-appearance
+      setProcessedTags(new Set());
 
       // Stop scanning if active
       if (isLinenBersihActive) {
@@ -241,10 +324,20 @@ const LinenCleanPage = ({ rfidHook }) => {
       return;
     }
 
-    if (isLinenBersihActive) {
-      stopLinenBersih();
-    } else {
-      startLinenBersih();
+    try {
+      if (isLinenBersihActive) {
+        console.log("🛑 Stopping linen bersih scan");
+        stopLinenBersih();
+      } else {
+        console.log("▶️ Starting linen bersih scan");
+        startLinenBersih();
+      }
+    } catch (error) {
+      console.error("❌ Error toggling linen bersih scan:", error);
+      toast.error("Gagal mengontrol scan linen bersih!", {
+        duration: 3000,
+        icon: "❌",
+      });
     }
   };
 
