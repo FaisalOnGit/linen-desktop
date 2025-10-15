@@ -32,6 +32,9 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     plateNumber: "",
   });
 
+  const [deliverySubmitted, setDeliverySubmitted] = useState(false);
+  const [lastDeliveryData, setLastDeliveryData] = useState(null);
+
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
   // Use custom hooks for data management
@@ -72,14 +75,22 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         `📡 DeliveryPage: Processing ${deliveryTags.length} tags from RFID`
       );
 
-      // Process each tag using processScannedEPC
-      // Let the hook handle duplicate detection internally
-      deliveryTags.forEach((tag, index) => {
-        if (tag && tag.EPC) {
-          console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
-          processScannedEPC(tag.EPC, formData.customerId);
-        }
-      });
+      try {
+        // Process each tag using processScannedEPC
+        // Let the hook handle duplicate detection internally
+        deliveryTags.forEach((tag, index) => {
+          if (tag && tag.EPC) {
+            console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
+            processScannedEPC(tag.EPC, formData.customerId);
+          }
+        });
+      } catch (error) {
+        console.error("❌ Error processing RFID tags:", error);
+        toast.error("Gagal memproses tag RFID!", {
+          duration: 3000,
+          icon: "❌",
+        });
+      }
     }
   }, [
     deliveryTags,
@@ -96,6 +107,32 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       qty: validLinens.length,
     }));
   }, [linens]);
+
+  // Clear all state when delivery type changes
+  useEffect(() => {
+    console.log("🔄 Delivery type changed, clearing all state");
+
+    // Stop RFID scanning if active
+    if (isDeliveryActive) {
+      stopDelivery();
+    }
+
+    // Clear all EPC data
+    clearAllEPCs();
+
+    // Reset form data
+    setFormData({
+      customerId: "",
+      customerName: "",
+      qty: 0,
+      driverName: "",
+      plateNumber: "",
+    });
+
+    // Reset delivery submission state
+    setDeliverySubmitted(false);
+    setLastDeliveryData(null);
+  }, [deliveryType]);
 
   // Form handlers
   const handleChange = (e) => {
@@ -127,11 +164,13 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
 
     clearAllEPCs();
-    // Only reset the quantity
+    // Reset the quantity and delivery submission state
     setFormData((prev) => ({
       ...prev,
       qty: 0,
     }));
+    setDeliverySubmitted(false);
+    setLastDeliveryData(null);
   };
 
   // Submit handler
@@ -232,17 +271,20 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
       const successMessage = result.message || "Proses delivery berhasil!";
 
-      // Reset form after success
-      setFormData({
-        customerId: "",
-        customerName: "",
-        qty: 0,
-        driverName: "",
-        plateNumber: "",
-      });
+      // Store delivery data for printing
+      const deliveryData = {
+        barcode: `DLV${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+        customer: formData.customerName,
+        room: formData.driverName,
+        totalLinen: validLinens.length.toString(),
+        qtyLinen: `${validLinens.length} PCS`,
+        deliveryType: currentDeliveryType.title,
+        deliveryTitle: currentDeliveryType.title.toUpperCase().replace('PENGIRIMAN ', ''),
+        driverLabel: 'Driver',
+      };
 
-      // Clear all EPC data using the hook
-      clearAllEPCs();
+      setLastDeliveryData(deliveryData);
+      setDeliverySubmitted(true);
 
       // Stop scanning if active
       if (isDeliveryActive) {
@@ -253,6 +295,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         duration: 4000,
         icon: "✅",
       });
+
+      // Auto-print after successful delivery
+      setTimeout(() => {
+        handlePrint();
+      }, 1000);
     } catch (error) {
       console.error("Error submit:", error);
       const errorMessage = error.message || "Gagal proses delivery, coba lagi!";
@@ -273,49 +320,27 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       return;
     }
 
-    if (isDeliveryActive) {
-      stopDelivery();
-    } else {
-      startDelivery();
+    try {
+      if (isDeliveryActive) {
+        console.log("🛑 Stopping RFID scan");
+        stopDelivery();
+      } else {
+        console.log("▶️ Starting RFID scan");
+        startDelivery();
+      }
+    } catch (error) {
+      console.error("❌ Error toggling RFID scan:", error);
+      toast.error("Gagal mengontrol scan RFID!", {
+        duration: 3000,
+        icon: "❌",
+      });
     }
   };
 
   // Print handler
   const handlePrint = async () => {
-    if (!formData.customerId) {
-      toast.error("Pilih customer terlebih dahulu!", {
-        duration: 3000,
-        icon: "⚠️",
-      });
-      return;
-    }
-
-    if (!formData.driverName.trim()) {
-      toast.error("Nama driver tidak boleh kosong!", {
-        duration: 3000,
-        icon: "⚠️",
-      });
-      return;
-    }
-
-    if (!formData.plateNumber.trim()) {
-      toast.error("Nomor plat tidak boleh kosong!", {
-        duration: 3000,
-        icon: "⚠️",
-      });
-      return;
-    }
-
-    const validLinens = linens.filter(
-      (linen) =>
-        linen.epc?.trim() &&
-        !linen.isNonExist &&
-        !linen.isDuplicate &&
-        linen.isValidCustomer !== false
-    );
-
-    if (validLinens.length === 0) {
-      toast.error("Minimal harus ada 1 EPC linen yang valid untuk print!", {
+    if (!deliverySubmitted || !lastDeliveryData) {
+      toast.error("Submit delivery terlebih dahulu sebelum print!", {
         duration: 3000,
         icon: "⚠️",
       });
@@ -323,19 +348,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
 
     try {
-      // Generate delivery data for print
-      const deliveryData = {
-        barcode: `DLV${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
-        customer: formData.customerName,
-        room: formData.driverName,
-        totalLinen: validLinens.length.toString(),
-        qtyLinen: `${validLinens.length} PCS`,
-        deliveryType: currentDeliveryType.title,
-        deliveryTitle: currentDeliveryType.title.toUpperCase().replace('PENGIRIMAN ', ''),
-        driverLabel: 'Driver',
-      };
-
-      await printDeliveryLabel(deliveryData);
+      await printDeliveryLabel(lastDeliveryData);
       toast.success("Print berhasil!", {
         duration: 3000,
         icon: "✅",
@@ -500,11 +513,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 <button
                   type="button"
                   onClick={handlePrint}
-                  disabled={!isBrowserPrintLoaded}
+                  disabled={!isBrowserPrintLoaded || !deliverySubmitted}
                   className={`bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm ${
-                    !isBrowserPrintLoaded ? 'bg-gray-400 cursor-not-allowed' : ''
+                    !isBrowserPrintLoaded || !deliverySubmitted ? 'bg-gray-400 cursor-not-allowed' : ''
                   }`}
-                  title="Print label delivery"
+                  title={deliverySubmitted ? "Print label delivery" : "Submit delivery first to enable printing"}
                 >
                   <Printer size={14} />
                   <span>Print</span>
