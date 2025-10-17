@@ -100,35 +100,49 @@ function PrintTestPage() {
       room: "RUANG RAWAT INAP LT 3",
       totalLinen: "45",
       qtyLinen: "45 PCS",
+      operator: "Asep Santoso",
     };
 
     // ZPL command untuk struk delivery linen
     const zplCommand = `^XA
 ^LL550
-^FO180,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA TESTTTTT^FS
-^FO310,60^A0N,28,28^FD(Obsesiman)^FS
+^FO200,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
+^FO330,60^A0N,28,28^FD(Obsesiman)^FS
 
-^FO310,95^A0N,35,35^FDDELIVERY^FS
+^FO330,95^A0N,35,35^FDDELIVERY^FS
 
-^FO200,150^BY2^BCN,80,Y,N,N^FD${deliveryData.barcode}^FS
+^FO330,125^A0N,20,20^FD${new Date()
+      .toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+      .replace(",", "")}^FS
 
-^FO150,270^A0N,25,25^FDDetail Pengiriman:^FS
-^FO150,305^GB400,0,2^FS
+^FO220,160^BY2^BCN,80,Y,N,N^FD${deliveryData.barcode}^FS
 
-^FO150,330^A0N,22,22^FDKlien:^FS
-^FO300,330^A0N,22,22^FD${deliveryData.client}^FS
+^FO170,290^A0N,25,25^FDDetail Pengiriman:^FS
+^FO170,325^GB400,0,2^FS
 
-^FO150,365^A0N,22,22^FDRuangan:^FS
-^FO300,365^A0N,22,22^FD${deliveryData.room}^FS
+^FO170,350^A0N,22,22^FDKlien:^FS
+^FO320,350^A0N,22,22^FD${deliveryData.client}^FS
 
-^FO150,400^A0N,22,22^FDTotal Linen:^FS
-^FO300,400^A0N,22,22^FD${deliveryData.totalLinen}^FS
+^FO170,385^A0N,22,22^FDRuangan:^FS
+^FO320,385^A0N,22,22^FD${deliveryData.room}^FS
 
-^FO150,435^A0N,22,22^FDQty Linen:^FS
-^FO300,435^A0N,22,22^FD${deliveryData.qtyLinen}^FS
+^FO170,420^A0N,22,22^FDTotal Linen:^FS
+^FO320,420^A0N,22,22^FD${deliveryData.totalLinen}^FS
 
-^FO150,470^GB400,0,2^FS
-^FO250,490^A0N,20,20^FDTerima kasih^FS
+^FO170,455^A0N,22,22^FDQty Linen:^FS
+^FO320,455^A0N,22,22^FD${deliveryData.qtyLinen}^FS
+
+^FO170,490^A0N,22,22^FDOperator:^FS
+^FO320,490^A0N,22,22^FD${deliveryData.operator}^FS
+
+^FO170,525^GB400,0,2^FS
+^FO330,545^A0N,20,20^FDTerima kasih^FS
 ^XZ`;
 
     selectedDevice.send(
