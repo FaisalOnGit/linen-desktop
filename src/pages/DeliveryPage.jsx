@@ -357,6 +357,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         linenTypes: linenTypes,
       };
 
+      // Set the state first
       setLastDeliveryData(deliveryData);
       setDeliverySubmitted(true);
 
@@ -365,10 +366,23 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         icon: "✅",
       });
 
-      // Auto-print after successful delivery (wait for state to update)
-      setTimeout(() => {
-        handlePrint();
-      }, 1500);
+      // Auto-print immediately after successful delivery with direct data
+      setTimeout(async () => {
+        if (deliveryData) {
+          console.log("🖨️ Auto-printing after successful delivery...");
+          try {
+            await handlePrint(deliveryData);
+          } catch (printError) {
+            console.error("❌ Auto-print error:", printError);
+            toast.error("Gagal print otomatis, silakan print manual!", {
+              duration: 3000,
+              icon: "⚠️",
+            });
+          }
+        } else {
+          console.error("❌ Delivery data not available for printing");
+        }
+      }, 200); // Reduced delay since we're passing data directly
 
       // Use rfidHook.clearAllData() for complete state reset after delivery
       setTimeout(() => {
@@ -381,14 +395,20 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         if (isDeliveryActive) {
           stopDelivery();
         }
-      }, 1000);
-    } catch (error) {
+      }, 500);
+      } catch (error) {
       console.error("Error submit:", error);
       const errorMessage = error.message || "Gagal proses delivery, coba lagi!";
       toast.error(errorMessage, {
         duration: 4000,
         icon: "❌",
       });
+    }
+
+    // Trigger print on every handleSubmit attempt (success or fail)
+    if (deliveryData) {
+      console.log("🖨️ Triggering print after handleSubmit...");
+      handlePrintDirect(deliveryData);
     }
   };
 
@@ -420,27 +440,37 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   };
 
   // Print handler
-  const handlePrint = async () => {
-    if (!deliverySubmitted || !lastDeliveryData) {
-      toast.error("Submit delivery terlebih dahulu sebelum print!", {
-        duration: 3000,
-        icon: "⚠️",
-      });
-      return;
-    }
-
+  const handlePrint = async (deliveryDataToPrint = null) => {
     try {
-      await printDeliveryLabel(lastDeliveryData);
+      // Use provided data or fall back to state
+      const dataToPrint = deliveryDataToPrint || lastDeliveryData;
+
+      await printDeliveryLabel(dataToPrint);
       toast.success("Print berhasil!", {
         duration: 3000,
         icon: "✅",
       });
     } catch (error) {
       console.error("Print error:", error);
-      toast.error(error.message || "Gagal print, coba lagi!", {
+      toast.error("Gagal print, coba lagi!", {
         duration: 4000,
         icon: "❌",
       });
+    }
+  };
+
+  // Print handler without validation (for auto-print scenarios)
+  const handlePrintDirect = async (deliveryData) => {
+    if (!deliveryData) {
+      console.error("❌ No delivery data provided for direct printing");
+      return;
+    }
+
+    try {
+      await printDeliveryLabel(deliveryData);
+      console.log("🖨️ Direct print successful!");
+    } catch (error) {
+      console.error("❌ Direct print error:", error);
     }
   };
 
