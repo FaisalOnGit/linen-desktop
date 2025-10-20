@@ -11,6 +11,7 @@ import {
   RefreshCw,
   RotateCcw,
   TestTube,
+  Search,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
 
@@ -80,18 +81,18 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
             },
           ],
         },
-        {
-          title: "Clean Process",
-          commands: [
-            {
-              id: "sorting",
-              label: "Linen\nBersih",
-              icon: CheckCircle,
-              size: "large",
-              description: "Process clean linen",
-            },
-          ],
-        },
+        // {
+        //   title: "Clean Process",
+        //   commands: [
+        //     // {
+        //     //   id: "sorting",
+        //     //   label: "Linen\nBersih",
+        //     //   icon: CheckCircle,
+        //     //   size: "large",
+        //     //   description: "Process clean linen",
+        //     // },
+        //   ],
+        // },
         {
           title: "Grouping",
           commands: [
@@ -134,6 +135,18 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               icon: RotateCcw,
               size: "large",
               description: "Return delivery shipments",
+            },
+          ],
+        },
+        {
+          title: "Final Check",
+          commands: [
+            {
+              id: "final-check",
+              label: "Final\nCheck",
+              icon: Search,
+              size: "large",
+              description: "Final check linen validation",
             },
           ],
         },

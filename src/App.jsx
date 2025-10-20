@@ -13,6 +13,7 @@ import { TableModeProvider } from "./contexts/TableModeContext";
 import Print from "./pages/Print";
 import DeliveryPage2 from "./pages/Delivery";
 import RfidTestPage from "./pages/RfidTestPage";
+import FinalCheckPage from "./pages/FinalCheck";
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
@@ -39,6 +40,8 @@ const App = () => {
         return <RegisterPage rfidHook={rfidHook} />;
       case "sorting":
         return <LinenCleanPage rfidHook={rfidHook} />;
+      case "final-check":
+        return <FinalCheckPage rfidHook={rfidHook} />;
       case "grouping":
         return <GroupingPage rfidHook={rfidHook} />;
       case "delivery-new":
