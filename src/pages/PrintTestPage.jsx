@@ -105,7 +105,7 @@ function PrintTestPage() {
 
     // ZPL command untuk struk delivery linen
     const zplCommand = `^XA
-^LL550
+^LL600
 ^FO200,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
 ^FO330,60^A0N,28,28^FD(Obsesiman)^FS
 
@@ -142,7 +142,7 @@ function PrintTestPage() {
 ^FO320,490^A0N,22,22^FD${deliveryData.operator}^FS
 
 ^FO170,525^GB400,0,2^FS
-^FO330,545^A0N,20,20^FDTerima kasih^FS
+^FO330,555^A0N,20,20^FDTerima kasih^FS
 ^XZ`;
 
     selectedDevice.send(
