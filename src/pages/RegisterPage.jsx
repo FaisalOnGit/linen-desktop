@@ -20,7 +20,7 @@ const RegisterPage = ({ rfidHook }) => {
     customerId: "",
     customerName: "",
     linenId: "",
-    rfidRegisterDescription: "",
+    rfidRegisterDescription: "-", // Hardcoded value
   });
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
@@ -112,13 +112,13 @@ const RegisterPage = ({ rfidHook }) => {
       console.log("🗑️ Clearing all EPC data...");
       clearAllEPCs();
 
-      // Reset form data completely (like tab switching) - keep customer and description
+      // Reset form data completely (like tab switching) - keep customer
       console.log("🔄 Resetting form data completely...");
       setFormData({
         customerId: formData.customerId, // Keep customer selection
         customerName: formData.customerName, // Keep customer name
         linenId: "",
-        rfidRegisterDescription: formData.rfidRegisterDescription, // Keep description
+        rfidRegisterDescription: "-", // Keep hardcoded value
       });
 
       // Force multiple state updates to ensure complete clearing
@@ -205,7 +205,7 @@ const RegisterPage = ({ rfidHook }) => {
         customerId: "",
         customerName: "",
         linenId: "",
-        rfidRegisterDescription: "",
+        rfidRegisterDescription: "-", // Reset to hardcoded value
       });
 
       // Use rfidHook.clearAllData() for complete state reset
@@ -274,7 +274,8 @@ const RegisterPage = ({ rfidHook }) => {
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Customer Info */}
+          <div className="grid grid-cols-1 gap-6">
             <div className="relative z-40">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Customer
@@ -318,19 +319,6 @@ const RegisterPage = ({ rfidHook }) => {
                   }),
                 }}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                name="rfidRegisterDescription"
-                value={formData.rfidRegisterDescription}
-                onChange={handleChange}
-                placeholder="Deskripsi registrasi RFID"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              ></textarea>
             </div>
           </div>
 

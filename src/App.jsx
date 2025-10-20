@@ -33,7 +33,7 @@ const App = () => {
   const renderActivePage = () => {
     switch (activePage) {
       case "login":
-        return <LoginPage onLoginSuccess={() => setActivePage("sorting")} />;
+        return <LoginPage onLoginSuccess={() => setActivePage("grouping")} />;
       case "reader":
         return <SettingPage rfidHook={rfidHook} />;
       case "register":

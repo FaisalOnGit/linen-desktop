@@ -11,7 +11,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getConfig: () => ipcRenderer.invoke("get-config"),
   saveConfig: (config) => ipcRenderer.invoke("save-config", config),
   savePowerSettings: (powerSettings, antennaEnabled) =>
-    ipcRenderer.invoke("save-power-settings", { powerSettings, antennaEnabled }),
+    ipcRenderer.invoke("save-power-settings", {
+      powerSettings,
+      antennaEnabled,
+    }),
   getPowerSettings: () => ipcRenderer.invoke("get-power-settings"),
 });
 
@@ -22,7 +25,8 @@ contextBridge.exposeInMainWorld("rfidAPI", {
   stopInventory: () => ipcRenderer.invoke("rfid-stop-inventory"),
   disconnect: () => ipcRenderer.invoke("rfid-disconnect"),
   getTags: () => ipcRenderer.invoke("rfid-get-tags"),
-  getTagsByAntenna: (antennaId) => ipcRenderer.invoke("rfid-get-tags-by-antenna", { antennaId }),
+  getTagsByAntenna: (antennaId) =>
+    ipcRenderer.invoke("rfid-get-tags-by-antenna", { antennaId }),
   getAllAntennaTags: () => ipcRenderer.invoke("rfid-get-all-antenna-tags"),
   clearTags: () => ipcRenderer.invoke("rfid-clear-tags"),
   setPower: (config) => ipcRenderer.invoke("rfid-set-power", config),
@@ -50,16 +54,59 @@ contextBridge.exposeInMainWorld("authAPI", {
     return Promise.resolve(globalToken);
   },
 
+  // Store user data in global variable
+  setUser: async (userData) => {
+    globalUserData = userData;
+    console.log(
+      "User data stored in global variable:",
+      userData ? `${userData.firstName} ${userData.lastName}` : null
+    );
+    return Promise.resolve(true);
+  },
+
+  // Get stored user data
+  getUser: async () => {
+    return Promise.resolve(globalUserData);
+  },
+
+  // Get user first name
+  getFirstName: async () => {
+    return Promise.resolve(globalUserData?.firstName || null);
+  },
+
+  // Get user last name
+  getLastName: async () => {
+    return Promise.resolve(globalUserData?.lastName || null);
+  },
+
+  // Get full name
+  getFullName: async () => {
+    if (globalUserData?.firstName && globalUserData?.lastName) {
+      return Promise.resolve(
+        `${globalUserData.firstName} ${globalUserData.lastName}`
+      );
+    }
+    return Promise.resolve(
+      globalUserData?.firstName || globalUserData?.lastName || null
+    );
+  },
+
   // Clear stored token
   clearToken: async () => {
     globalToken = null;
-    console.log("Token cleared from global variable");
+    globalUserData = null;
+    console.log("Token and user data cleared from global variable");
     return Promise.resolve(true);
   },
 
   // Check if token exists
   hasToken: async () => {
     return Promise.resolve(!!globalToken);
+  },
+
+  // Check if user data exists
+  hasUser: async () => {
+    return Promise.resolve(!!globalUserData);
   },
 });
 

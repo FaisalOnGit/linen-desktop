@@ -40,11 +40,18 @@ const LoginPage = ({ onLoginSuccess }) => {
       if (data.success === true || data.status === "success") {
         if (data.token || data.data?.token) {
           const token = data.token || data.data?.token;
+          const userData = data.data || {};
 
           try {
             // Save token via preload API
             await window.authAPI.setToken(token);
             console.log("Token saved successfully");
+
+            // Save user data via preload API
+            if (userData.firstName || userData.lastName) {
+              await window.authAPI.setUser(userData);
+              console.log("User data saved successfully");
+            }
 
             // Call success callback
             onLoginSuccess();

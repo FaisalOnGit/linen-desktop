@@ -3,6 +3,7 @@ import { Play, Trash2, Square, Truck, Printer } from "lucide-react";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { useDeliveryData } from "../hooks/useDeliveryData";
+import { useRooms } from "../hooks/useRooms";
 import usePrint from "../hooks/usePrint";
 
 const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
@@ -29,13 +30,33 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     customerName: "",
     qty: 0,
     driverName: "",
-    plateNumber: "",
+    plateNumber: "-", // Hardcoded value
+    roomId: "",
   });
 
   const [deliverySubmitted, setDeliverySubmitted] = useState(false);
   const [lastDeliveryData, setLastDeliveryData] = useState(null);
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
+
+  // Get user full name for driver
+  useEffect(() => {
+    const getUserFullName = async () => {
+      try {
+        const fullName = await window.authAPI.getFullName();
+        if (fullName) {
+          setFormData((prev) => ({
+            ...prev,
+            driverName: fullName,
+          }));
+        }
+      } catch (error) {
+        console.error("Error getting user full name:", error);
+      }
+    };
+
+    getUserFullName();
+  }, []); // Empty dependency array - only run once on mount
 
   // Use custom hooks for data management
   const {
@@ -52,6 +73,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     fetchCustomers,
     getCustomerById,
   } = useDeliveryData(baseUrl);
+
+  const { rooms, loadingRooms, fetchRooms, getRoomById } = useRooms(baseUrl);
+
+  // Effect untuk fetch rooms ketika customerId berubah
+  useEffect(() => {
+    if (formData.customerId) {
+      fetchRooms(formData.customerId);
+    }
+  }, [formData.customerId, fetchRooms]);
 
   // Print functionality
   const {
@@ -115,13 +145,27 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     // Clear all EPC data
     clearAllEPCs();
 
-    // Reset form data
-    setFormData({
-      customerId: "",
-      customerName: "",
-      qty: 0,
-      driverName: "",
-      plateNumber: "",
+    // Get current driver name before resetting form
+    const getCurrentDriverName = async () => {
+      try {
+        const fullName = await window.authAPI.getFullName();
+        return fullName || "";
+      } catch (error) {
+        console.error("Error getting user full name:", error);
+        return "";
+      }
+    };
+
+    // Reset form data but keep driver name
+    getCurrentDriverName().then((driverName) => {
+      setFormData({
+        customerId: "",
+        customerName: "",
+        qty: 0,
+        driverName: driverName, // Keep current driver name
+        plateNumber: "-", // Keep hardcoded value
+        roomId: "", // Reset room selection
+      });
     });
 
     // Reset delivery submission state
@@ -142,6 +186,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       ...formData,
       customerId: selected?.customerId || "",
       customerName: selected?.customerName || "",
+      roomId: "", // Reset room when customer changes
     };
     setFormData(newFormData);
 
@@ -176,6 +221,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       setFormData((prev) => ({
         ...prev,
         qty: 0,
+        roomId: "", // Reset room selection
       }));
 
       // Reset delivery submission state
@@ -244,13 +290,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       return;
     }
 
-    if (!formData.plateNumber.trim()) {
-      toast.error("Nomor plat tidak boleh kosong!", {
-        duration: 3000,
-        icon: "⚠️",
-      });
-      return;
-    }
+    // Plate number validation removed (hardcoded value)
 
     // Check for invalid customer tags
     const invalidLinenCount = getInvalidLinenCount();
@@ -293,6 +333,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         qty: validLinens.length,
         driverName: formData.driverName,
         plateNumber: formData.plateNumber,
+        roomId: formData.roomId, // Add room to payload
         linens: validLinens.map((linen) => ({
           epc: linen.epc,
           status_id: linen.statusId || 1,
@@ -396,7 +437,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           stopDelivery();
         }
       }, 500);
-      } catch (error) {
+    } catch (error) {
       console.error("Error submit:", error);
       const errorMessage = error.message || "Gagal proses delivery, coba lagi!";
       toast.error(errorMessage, {
@@ -517,8 +558,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               {currentDeliveryType.title}
             </h1>
           </div>
-          {/* Customer and Delivery Info */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Customer, Driver and Room Info */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Customer <span className="text-red-500">*</span>
@@ -560,46 +601,54 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Jumlah Linen
-              </label>
-              <input
-                type="number"
-                name="qty"
-                value={formData.qty}
-                readOnly
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                placeholder="Auto-calculated"
-              />
-            </div>
-          </div>
-
-          {/* Driver Information */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nama Driver <span className="text-red-500">*</span>
+                Nama Customer Service <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="driverName"
                 value={formData.driverName}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                placeholder="Masukkan nama driver"
+                disabled
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
+                placeholder="Nama driver otomatis dari user login"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nomor Polisi <span className="text-red-500">*</span>
+                Pilih Room
               </label>
-              <input
-                type="text"
-                name="plateNumber"
-                value={formData.plateNumber}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                placeholder="Masukkan nomor plat kendaraan"
+              <Select
+                value={formData.roomId ? getRoomById(formData.roomId) : null}
+                onChange={(selected) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    roomId: selected?.roomId || "",
+                  }));
+                }}
+                options={rooms}
+                getOptionLabel={(room) => `${room.roomName} (${room.roomId})`}
+                getOptionValue={(room) => room.roomId}
+                placeholder="Pilih room..."
+                isClearable
+                isSearchable
+                isLoading={loadingRooms}
+                noOptionsMessage={() => "Room tidak ditemukan"}
+                className="w-full"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (baseStyles, state) => ({
+                    ...baseStyles,
+                    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+                    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
+                    fontSize: "14px",
+                    minHeight: "38px",
+                  }),
+                  option: (baseStyles) => ({
+                    ...baseStyles,
+                    fontSize: "14px",
+                  }),
+                }}
               />
             </div>
           </div>
@@ -814,13 +863,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               disabled={
                 !formData.customerId ||
                 !formData.driverName.trim() ||
-                !formData.plateNumber.trim() ||
                 getValidLinenCount() === 0
               }
               className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                 !formData.customerId ||
                 !formData.driverName.trim() ||
-                !formData.plateNumber.trim() ||
                 getValidLinenCount() === 0
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-400 text-white"

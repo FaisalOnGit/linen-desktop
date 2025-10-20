@@ -12,6 +12,8 @@ import {
   RotateCcw,
   TestTube,
   Search,
+  Tags,
+  PackageOpen,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
 
@@ -75,7 +77,7 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
             {
               id: "register",
               label: "Register\nRFID",
-              icon: FileText,
+              icon: Tags,
               size: "large",
               description: "Register new RFID tags",
             },
@@ -99,7 +101,7 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
             {
               id: "grouping",
               label: "Grouping\nLinen",
-              icon: FileText,
+              icon: PackageOpen,
               size: "large",
               description: "Group linen items",
             },
