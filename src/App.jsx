@@ -15,6 +15,8 @@ import DeliveryPage2 from "./pages/Delivery";
 import RfidTestPage from "./pages/RfidTestPage";
 import FinalCheckPage from "./pages/FinalCheck";
 import { Toaster } from "react-hot-toast";
+import ScanningPage from "./pages/ScanningPage";
+import Scanning from "./pages/Scanning";
 
 const App = () => {
   const [activePage, setActivePage] = useState("login");
@@ -42,8 +44,10 @@ const App = () => {
         return <LinenCleanPage rfidHook={rfidHook} />;
       case "final-check":
         return <FinalCheckPage rfidHook={rfidHook} />;
-      case "grouping":
+      case "scanning":
         return <GroupingPage rfidHook={rfidHook} />;
+      case "grouping":
+        return <Scanning rfidHook={rfidHook} />;
       case "delivery-new":
         return <DeliveryPage rfidHook={rfidHook} deliveryType={1} />;
       case "delivery-regular":

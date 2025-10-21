@@ -105,6 +105,13 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               size: "large",
               description: "Group linen items",
             },
+            // {
+            //   id: "scanning",
+            //   label: "Scanner",
+            //   icon: Search,
+            //   size: "large",
+            //   description: "Scan and validate RFID tags",
+            // },
           ],
         },
         {
