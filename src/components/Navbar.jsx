@@ -86,13 +86,13 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
         // {
         //   title: "Clean Process",
         //   commands: [
-        //     // {
-        //     //   id: "sorting",
-        //     //   label: "Linen\nBersih",
-        //     //   icon: CheckCircle,
-        //     //   size: "large",
-        //     //   description: "Process clean linen",
-        //     // },
+        //     {
+        //       id: "sorting",
+        //       label: "Linen\nBersih",
+        //       icon: CheckCircle,
+        //       size: "large",
+        //       description: "Process clean linen",
+        //     },
         //   ],
         // },
         {

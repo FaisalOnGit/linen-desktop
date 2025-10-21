@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Play, Trash2, Square, Truck, Printer } from "lucide-react";
 import Select from "react-select";
 import toast from "react-hot-toast";
-import { useDeliveryData } from "../hooks/useDeliveryData";
+import { useLinenData } from "../hooks/useLinenData";
+import { useCustomers } from "../hooks/useCustomers";
 import { useRooms } from "../hooks/useRooms";
 import usePrint from "../hooks/usePrint";
 
@@ -59,20 +60,24 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   }, []); // Empty dependency array - only run once on mount
 
   // Use custom hooks for data management
+  const { customers, loadingCustomers, fetchCustomers, getCustomerById } = useCustomers(baseUrl);
+
   const {
     linens,
-    customers,
-    loadingCustomers,
-    isDataValid,
     getValidLinenCount,
     getInvalidLinenCount,
     processScannedEPC,
-    validateAllLinens,
+    revalidateLinens,
     clearAllEPCs,
     updateLinenField,
-    fetchCustomers,
-    getCustomerById,
-  } = useDeliveryData(baseUrl);
+  } = useLinenData(baseUrl, formData.customerId);
+
+  // Effect to reinitialize useLinenData when customerId changes
+  useEffect(() => {
+    if (formData.customerId) {
+      revalidateLinens(formData.customerId);
+    }
+  }, [formData.customerId, revalidateLinens]);
 
   const { rooms, loadingRooms, fetchRooms, getRoomById } = useRooms(baseUrl);
 
@@ -191,7 +196,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     setFormData(newFormData);
 
     // Re-validate all existing linens when customer changes
-    validateAllLinens(selected?.customerId || "");
+    revalidateLinens(selected?.customerId || "");
   };
 
   const handleClearAll = () => {
@@ -313,8 +318,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       const validLinens = linens.filter(
         (linen) =>
           linen.epc?.trim() &&
-          !linen.isNonExist &&
-          !linen.isDuplicate &&
           linen.isValidCustomer !== false
       );
 
@@ -371,7 +374,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       try {
         // Extract unique linen names from the existing linens data
         const allLinenNames = validLinens
-          .map((linen) => linen.linenName)
+          .map((linen) => linen.linenName || linen.linenTypeName || "Unknown")
           .filter((name) => name && name.trim());
 
         // Get unique linen names
@@ -537,9 +540,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
   const getRowColor = (linen) => {
     if (linen.isValidCustomer === false) {
-      return "bg-red-50 border-red-200";
-    }
-    if (linen.isNonExist || linen.isDuplicate) {
       return "bg-red-50 border-red-200";
     }
     if (linen.epc) {
@@ -788,17 +788,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                                 ✗ Invalid
                               </span>
                             )}
-                            {linen.isNonExist && (
-                              <span className="ml-2 text-xs text-red-600">
-                                ✗ Not Found
-                              </span>
-                            )}
-                            {linen.isDuplicate && (
-                              <span className="ml-2 text-xs text-red-600">
-                                ✗ Duplicate
-                              </span>
-                            )}
-                          </td>
+                            </td>
                           <td className="px-4 py-3 border-b">
                             <input
                               type="text"
@@ -806,9 +796,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                               readOnly
                               placeholder="Auto-filled dari scan RFID"
                               className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
-                                linen.isValidCustomer === false ||
-                                linen.isNonExist ||
-                                linen.isDuplicate
+                                linen.isValidCustomer === false
                                   ? "border-red-300 bg-red-50"
                                   : linen.epc
                                   ? "bg-green-50 border-green-300"
