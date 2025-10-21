@@ -350,8 +350,7 @@ const FinalCheckPage = ({ rfidHook }) => {
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-700">
                   ⚠️ Terdapat {getInvalidLinenCount()} tag yang tidak sesuai
-                  dengan customer yang dipilih. Tag tersebut ditandai dengan
-                  warna merah.
+                  dengan customer yang dipilih.
                 </p>
               </div>
             )}

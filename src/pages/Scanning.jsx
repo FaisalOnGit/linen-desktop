@@ -38,8 +38,49 @@ const Scanning = ({ rfidHook }) => {
     getInvalidLinenCount,
   } = useLinenData(baseUrl, formData.customerId);
 
+  // Track EPCs that have been processed by the API to prevent duplicate calls
+  const [apiProcessedEPCs, setApiProcessedEPCs] = useState(new Set());
+
   const { customers, loadingCustomers, fetchCustomers, getCustomerById } =
     useCustomers(baseUrl);
+
+  // Function to change status to pending via API
+  const changeStatusToPending = async (epc) => {
+    try {
+      // Get token from authAPI
+      const token = await window.authAPI.getToken();
+
+      if (!token) {
+        console.error("No authentication token found");
+        return false;
+      }
+
+      const response = await fetch(
+        `${baseUrl}/Process/change_status_pending/${epc}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error(
+          `Failed to change status for EPC ${epc}:`,
+          response.statusText
+        );
+        return false;
+      }
+
+      console.log(`Successfully changed status to pending for EPC: ${epc}`);
+      return true;
+    } catch (error) {
+      console.error(`Error changing status for EPC ${epc}:`, error);
+      return false;
+    }
+  };
 
   // Handle RFID tag scanning
   useEffect(() => {
@@ -102,6 +143,67 @@ const Scanning = ({ rfidHook }) => {
     }));
   }, [linens]);
 
+  // Effect to process EPCs in the table via API
+  useEffect(() => {
+    const processEPCs = async () => {
+      console.log("🔄 Processing EPCs in table...");
+
+      // Get all valid EPCs from the table
+      const validLinens = linens.filter((linen) => linen.epc?.trim());
+      const epcList = validLinens.map((linen) => linen.epc.trim());
+
+      console.log("📊 Total EPCs in table:", validLinens.length);
+      console.log("📋 EPCs in table:", epcList);
+      console.log("🚫 Already processed EPCs:", Array.from(apiProcessedEPCs));
+
+      // Process each EPC that hasn't been processed by the API yet
+      const epcsToProcess = epcList.filter((epc) => !apiProcessedEPCs.has(epc));
+
+      console.log("⏳ EPCs to process:", epcsToProcess);
+
+      if (epcsToProcess.length > 0) {
+        const newProcessedEPCs = new Set(apiProcessedEPCs);
+
+        // Process each EPC individually to avoid overwhelming the API
+        for (const epc of epcsToProcess) {
+          console.log("🚀 Processing EPC:", epc);
+          try {
+            const success = await changeStatusToPending(epc);
+            // Mark EPC as processed regardless of success or failure to prevent retry
+            newProcessedEPCs.add(epc);
+
+            if (!success) {
+              console.warn(`❌ EPC ${epc} failed to process, will not retry`);
+            } else {
+              console.log(`✅ EPC ${epc} processed successfully`);
+            }
+          } catch (error) {
+            console.error(`💥 Failed to process EPC ${epc}:`, error);
+            // Still mark as processed to prevent retry on error
+            newProcessedEPCs.add(epc);
+          }
+        }
+
+        // Update the processed EPCs set
+        setApiProcessedEPCs(newProcessedEPCs);
+        console.log(
+          "✨ Updated processed EPCs set:",
+          Array.from(newProcessedEPCs)
+        );
+      } else {
+        console.log("ℹ️ No new EPCs to process");
+      }
+    };
+
+    // Only process if we have valid linens
+    if (linens.some((linen) => linen.epc?.trim())) {
+      console.log("🎯 Triggering EPC processing...");
+      processEPCs();
+    } else {
+      console.log("📭 No valid linens to process");
+    }
+  }, [linens, apiProcessedEPCs, baseUrl]);
+
   // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -150,6 +252,9 @@ const Scanning = ({ rfidHook }) => {
       // Clear processed tags to prevent re-appearance
       setProcessedTags(new Set());
 
+      // Clear API processed EPCs tracking
+      setApiProcessedEPCs(new Set());
+
       // Reset form data completely (like tab switching)
       setFormData({
         customerId: formData.customerId, // Keep customer selection
@@ -160,6 +265,7 @@ const Scanning = ({ rfidHook }) => {
       // Force multiple state updates to ensure complete clearing
       setTimeout(() => {
         setProcessedTags(new Set());
+        setApiProcessedEPCs(new Set());
         clearAllEPCs(); // Call again to be sure
 
         // Double-check rfidHook data clearing
@@ -170,6 +276,7 @@ const Scanning = ({ rfidHook }) => {
 
       setTimeout(() => {
         setProcessedTags(new Set());
+        setApiProcessedEPCs(new Set());
 
         // Final rfidHook data clearing
         if (rfidHook && rfidHook.clearAllData) {
@@ -300,14 +407,6 @@ const Scanning = ({ rfidHook }) => {
                 </span>
               </div>
               <div className="flex items-center">
-                <label className="text-gray-600 w-20">Status</label>
-                <span className="mx-3">:</span>
-                <span className="text-gray-800">
-                  {linens.filter((l) => l.epc?.trim()).reverse()[0]?.status ||
-                    "−"}
-                </span>
-              </div>
-              <div className="flex items-center">
                 <label className="text-gray-600 w-20">Ruangan</label>
                 <span className="mx-3">:</span>
                 <span className="text-gray-800">
@@ -322,7 +421,7 @@ const Scanning = ({ rfidHook }) => {
           <div>
             <div className="flex justify-between items-center mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Data Linen (EPC & Status)
+                Data Linen (EPC)
               </label>
               <div className="flex gap-2">
                 <button
@@ -352,9 +451,6 @@ const Scanning = ({ rfidHook }) => {
                     </th>
                     <th className="px-3 py-2 text-left text-base font-medium text-gray-700 border-b">
                       Ruangan
-                    </th>
-                    <th className="px-3 py-2 text-left text-base font-medium text-gray-700 border-b">
-                      Status Linen
                     </th>
                   </tr>
                 </thead>
@@ -402,15 +498,6 @@ const Scanning = ({ rfidHook }) => {
                             ) : (
                               <div className="text-base text-gray-400">-</div>
                             )}
-                          </td>
-                          <td className="px-3 py-1 border-b">
-                            <div
-                              className={`px-2 py-1 rounded text-base font-medium text-center ${getStatusColor(
-                                linen.status
-                              )}`}
-                            >
-                              {linen.status || "Unknown"}
-                            </div>
                           </td>
                         </tr>
                       );

@@ -60,7 +60,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   }, []); // Empty dependency array - only run once on mount
 
   // Use custom hooks for data management
-  const { customers, loadingCustomers, fetchCustomers, getCustomerById } = useCustomers(baseUrl);
+  const { customers, loadingCustomers, fetchCustomers, getCustomerById } =
+    useCustomers(baseUrl);
 
   const {
     linens,
@@ -316,9 +317,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
       // Filter valid linens
       const validLinens = linens.filter(
-        (linen) =>
-          linen.epc?.trim() &&
-          linen.isValidCustomer !== false
+        (linen) => linen.epc?.trim() && linen.isValidCustomer !== false
       );
 
       if (validLinens.length === 0) {
@@ -739,8 +738,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-700">
                   ⚠️ Terdapat {getInvalidLinenCount()} tag yang tidak sesuai
-                  dengan customer yang dipilih. Tag tersebut tidak akan diproses
-                  saat submit.
+                  dengan customer yang dipilih.
                 </p>
               </div>
             )}
@@ -788,7 +786,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                                 ✗ Invalid
                               </span>
                             )}
-                            </td>
+                          </td>
                           <td className="px-4 py-3 border-b">
                             <input
                               type="text"
