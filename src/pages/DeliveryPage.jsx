@@ -452,18 +452,18 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         }
       }, 200); // Reduced delay since we're passing data directly
 
-      // Use rfidHook.clearAllData() for complete state reset after delivery
-      setTimeout(() => {
-        console.log("🗑️ Clearing all RFID data after successful delivery...");
-        if (rfidHook && rfidHook.clearAllData) {
-          rfidHook.clearAllData();
-        }
-
-        // Stop scanning if active
-        if (isDeliveryActive) {
-          stopDelivery();
-        }
-      }, 500);
+      // Commented out automatic state clear after successful delivery
+      // Keep state so user can print again with same data
+      // setTimeout(() => {
+      //   console.log("🗑️ Clearing all RFID data after successful delivery...");
+      //   if (rfidHook && rfidHook.clearAllData) {
+      //     rfidHook.clearAllData();
+      //   }
+      //   // Stop scanning if active
+      //   if (isDeliveryActive) {
+      //     stopDelivery();
+      //   }
+      // }, 500);
     } catch (error) {
       console.error("Error submit:", error);
       const errorMessage = error.message || "Gagal proses delivery, coba lagi!";
@@ -471,12 +471,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         duration: 4000,
         icon: "❌",
       });
-    }
-
-    // Trigger print on every handleSubmit attempt (success or fail)
-    if (deliveryData) {
-      console.log("🖨️ Triggering print after handleSubmit...");
-      handlePrintDirect(deliveryData);
     }
   };
 
@@ -527,7 +521,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   };
 
-  // Print handler without validation (for auto-print scenarios)
+  // Enhanced print handler for manual printing after successful delivery
   const handlePrintDirect = async (deliveryData) => {
     if (!deliveryData) {
       console.error("❌ No delivery data provided for direct printing");
@@ -537,8 +531,16 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     try {
       await printDeliveryLabel(deliveryData);
       console.log("🖨️ Direct print successful!");
+      toast.success("Print ulang berhasil!", {
+        duration: 3000,
+        icon: "✅",
+      });
     } catch (error) {
       console.error("❌ Direct print error:", error);
+      toast.error("Gagal print ulang, coba lagi!", {
+        duration: 3000,
+        icon: "❌",
+      });
     }
   };
 
@@ -697,7 +699,16 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 {/* Print Button */}
                 <button
                   type="button"
-                  onClick={handlePrint}
+                  onClick={() => {
+                    if (deliverySubmitted && lastDeliveryData) {
+                      handlePrintDirect(lastDeliveryData);
+                    } else {
+                      toast.error("Submit delivery terlebih dahulu!", {
+                        duration: 3000,
+                        icon: "⚠️",
+                      });
+                    }
+                  }}
                   disabled={!isBrowserPrintLoaded || !deliverySubmitted}
                   className={`bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm ${
                     !isBrowserPrintLoaded || !deliverySubmitted

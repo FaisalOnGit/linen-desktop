@@ -114,9 +114,9 @@ const usePrint = () => {
         const yPos = startY + index * lineHeight;
 
         // Display linen name and quantity vertically in single column
-        linenItems += `^FO170,${yPos}^A0N,22,22^FD${index + 1}. ${
-          item.name
-        }: ${item.quantity || "-"}^FS\n`;
+        linenItems += `^FO170,${yPos}^A0N,22,22^FD- ${item.name}: ${
+          item.quantity || "-"
+        }^FS\n`;
       });
     } else if (deliveryData.linenTypes) {
       // Fallback for single linen type
