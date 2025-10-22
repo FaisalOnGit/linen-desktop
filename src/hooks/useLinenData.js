@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef } from "react";
 
-export const useLinenData = (baseUrl, customerId) => {
+export const useLinenData = (baseUrl, customerId, roomId) => {
   const [linens, setLinens] = useState([
-    { epc: "", status_id: 1, loading: false, isValidCustomer: true },
+    { epc: "", status_id: 1, loading: false, isValidCustomer: true, isValidRoom: true },
   ]);
   const [processedTags, setProcessedTags] = useState(new Set());
   const [validEpcs, setValidEpcs] = useState(new Set());
@@ -45,7 +45,7 @@ export const useLinenData = (baseUrl, customerId) => {
 
     // Reset all linen data to initial state
     setLinens([
-      { epc: "", status_id: 1, loading: false, isValidCustomer: true },
+      { epc: "", status_id: 1, loading: false, isValidCustomer: true, isValidRoom: true },
     ]);
 
     // Clear ALL tracking states including processedTags and cache
@@ -74,6 +74,7 @@ export const useLinenData = (baseUrl, customerId) => {
         updatedLinens[index].roomName = "";
         updatedLinens[index].loading = false;
         updatedLinens[index].isValidCustomer = true;
+        updatedLinens[index].isValidRoom = true;
         updatedLinens[index].errorMessage = null;
       } else if (field === "status_id") {
         updatedLinens[index][field] = parseInt(value);
@@ -84,14 +85,15 @@ export const useLinenData = (baseUrl, customerId) => {
     });
   }, []);
 
-  // Revalidate all linens when customer changes
-  const revalidateLinens = useCallback((newCustomerId) => {
+  // Revalidate all linens when customer or room changes
+  const revalidateLinens = useCallback((newCustomerId, newRoomId) => {
     if (!newCustomerId) {
       // If no customer selected, mark all as valid
       setLinens((prev) =>
         prev.map((linen) => ({
           ...linen,
           isValidCustomer: true,
+          isValidRoom: true,
           errorMessage: null,
         }))
       );
@@ -101,12 +103,17 @@ export const useLinenData = (baseUrl, customerId) => {
     setLinens((prev) =>
       prev.map((linen) => {
         if (linen.epc && linen.customerId) {
-          const isValid = linen.customerId === newCustomerId;
+          const isValidCustomer = linen.customerId === newCustomerId;
+          const isValidRoom = !newRoomId || linen.roomId === newRoomId;
+
           return {
             ...linen,
-            isValidCustomer: isValid,
-            errorMessage: !isValid
+            isValidCustomer: isValidCustomer,
+            isValidRoom: isValidRoom,
+            errorMessage: !isValidCustomer
               ? `Tag milik ${linen.customerName} (${linen.customerId})`
+              : !isValidRoom
+              ? `Tag milik room ${linen.roomName} (${linen.roomId})`
               : null,
           };
         }
@@ -164,9 +171,10 @@ export const useLinenData = (baseUrl, customerId) => {
           if (cachedData && cachedData.length > 0) {
             const linenData = cachedData[0];
 
-            // Check if the linen belongs to the selected customer
+            // Check if the linen belongs to the selected customer and room
             const isValidCustomer =
               !customerId || linenData.customerId === customerId;
+            const isValidRoom = !roomId || linenData.roomId === roomId;
 
             // Add to valid EPCs set
             setValidEpcs((prev) => new Set([...prev, epc]));
@@ -195,8 +203,11 @@ export const useLinenData = (baseUrl, customerId) => {
                         status: linenData.status,
                         loading: false,
                         isValidCustomer: isValidCustomer,
+                        isValidRoom: isValidRoom,
                         errorMessage: !isValidCustomer
                           ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                          : !isValidRoom
+                          ? `Tag milik room ${linenData.roomName} (${linenData.roomId})`
                           : null,
                       }
                     : linen
@@ -205,7 +216,7 @@ export const useLinenData = (baseUrl, customerId) => {
                 // Add a new empty row to maintain structure
                 return [
                   ...updated,
-                  { epc: "", status_id: 1, loading: false, isValidCustomer: true }
+                  { epc: "", status_id: 1, loading: false, isValidCustomer: true, isValidRoom: true }
                 ];
               } else {
                 // No empty row found, append new EPC and add empty row
@@ -225,11 +236,14 @@ export const useLinenData = (baseUrl, customerId) => {
                     status_id: linenData.statusId || 1,
                     loading: false,
                     isValidCustomer: isValidCustomer,
+                    isValidRoom: isValidRoom,
                     errorMessage: !isValidCustomer
                       ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                      : !isValidRoom
+                      ? `Tag milik room ${linenData.roomName} (${linenData.roomId})`
                       : null,
                   },
-                  { epc: "", status_id: 1, loading: false, isValidCustomer: true }
+                  { epc: "", status_id: 1, loading: false, isValidCustomer: true, isValidRoom: true }
                 ];
               }
             });
@@ -316,7 +330,7 @@ export const useLinenData = (baseUrl, customerId) => {
                   // Add a new empty row to maintain structure
                   return [
                     ...updated,
-                    { epc: "", status_id: 1, loading: false, isValidCustomer: true }
+                    { epc: "", status_id: 1, loading: false, isValidCustomer: true, isValidRoom: true }
                   ];
                 } else {
                   // No empty row found, append new EPC and add empty row
@@ -340,7 +354,7 @@ export const useLinenData = (baseUrl, customerId) => {
                         ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
                         : null,
                     },
-                    { epc: "", status_id: 1, loading: false, isValidCustomer: true }
+                    { epc: "", status_id: 1, loading: false, isValidCustomer: true, isValidRoom: true }
                   ];
                 }
               });
@@ -369,7 +383,7 @@ export const useLinenData = (baseUrl, customerId) => {
         currentlyProcessing.current.delete(epc);
       }
     },
-    [baseUrl, customerId, epcCache, nonExistentEpcs]
+    [baseUrl, customerId, roomId, epcCache, nonExistentEpcs]
   );
 
   // Handle manual EPC input validation
@@ -414,8 +428,11 @@ export const useLinenData = (baseUrl, customerId) => {
                     status: linenData.status,
                     loading: false,
                     isValidCustomer: isValidCustomer,
+                    isValidRoom: isValidRoom,
                     errorMessage: !isValidCustomer
                       ? `Tag milik ${linenData.customerName} (${linenData.customerId})`
+                      : !isValidRoom
+                      ? `Tag milik room ${linenData.roomName} (${linenData.roomId})`
                       : null,
                   }
                 : linen
@@ -436,6 +453,7 @@ export const useLinenData = (baseUrl, customerId) => {
                     status_id: 1,
                     loading: false,
                     isValidCustomer: true,
+                    isValidRoom: true,
                   },
                 ];
           });
@@ -471,9 +489,10 @@ export const useLinenData = (baseUrl, customerId) => {
           if (result.success && result.data && result.data.length > 0) {
             const linenData = result.data[0];
 
-            // Check if the linen belongs to the selected customer
+            // Check if the linen belongs to the selected customer and room
             const isValidCustomer =
               !customerId || linenData.customerId === customerId;
+            const isValidRoom = !roomId || linenData.roomId === roomId;
 
             // Add to valid EPCs set
             setValidEpcs((prev) => new Set([...prev, epc]));
@@ -548,6 +567,7 @@ export const useLinenData = (baseUrl, customerId) => {
                     status_id: 1,
                     loading: false,
                     isValidCustomer: true,
+                    isValidRoom: true,
                   },
                 ];
           });
@@ -585,7 +605,7 @@ export const useLinenData = (baseUrl, customerId) => {
         });
       }
     },
-    [baseUrl, customerId, epcCache]
+    [baseUrl, customerId, roomId, epcCache]
   );
 
   // Get count of valid linens (with EPC and valid customer)
@@ -599,6 +619,13 @@ export const useLinenData = (baseUrl, customerId) => {
   const getInvalidLinenCount = useCallback(() => {
     return linens.filter(
       (linen) => linen.epc?.trim() && linen.isValidCustomer === false
+    ).length;
+  }, [linens]);
+
+  // Get count of invalid room linens
+  const getInvalidRoomLinenCount = useCallback(() => {
+    return linens.filter(
+      (linen) => linen.epc?.trim() && linen.isValidRoom === false
     ).length;
   }, [linens]);
 
@@ -622,6 +649,7 @@ export const useLinenData = (baseUrl, customerId) => {
     // Computed values
     getValidLinenCount,
     getInvalidLinenCount,
+    getInvalidRoomLinenCount,
     setProcessedTags,
   };
 };

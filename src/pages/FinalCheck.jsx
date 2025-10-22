@@ -176,11 +176,6 @@ const FinalCheckPage = ({ rfidHook }) => {
           rfidHook.clearAllData();
         }
       }, 200);
-
-      toast.success("Semua data linen berhasil dibersihkan!", {
-        duration: 2000,
-        icon: "✅",
-      });
     } catch (error) {
       toast.error("Gagal membersihkan data!", {
         duration: 3000,

@@ -87,31 +87,9 @@ function PrintTestPage() {
     );
   };
 
-  const printDeliveryLinen = () => {
-    if (!selectedDevice) {
-      alert("No printer selected!");
-      return;
-    }
-
-    // Sample data - bisa diganti dengan data dinamis
-    const deliveryData = {
-      barcode: "DLV20250310001",
-      client: "RS PREMIER JATINEGARA",
-      room: "RUANG RAWAT INAP LT 3",
-      totalLinen: "45",
-      qtyLinen: "45 PCS",
-      operator: "Asep Santoso",
-    };
-
-    // ZPL command untuk struk delivery linen
-    const zplCommand = `^XA
-^LL600
-^FO200,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
-^FO330,60^A0N,28,28^FD(Obsesiman)^FS
-
-^FO330,95^A0N,35,35^FDDELIVERY^FS
-
-^FO330,125^A0N,20,20^FD${new Date()
+  const generateDeliveryZPL = (deliveryData) => {
+    // Generate current date in dd/MM/yyyy HH:mm format
+    const currentDate = new Date()
       .toLocaleString("en-GB", {
         day: "2-digit",
         month: "2-digit",
@@ -119,31 +97,99 @@ function PrintTestPage() {
         hour: "2-digit",
         minute: "2-digit",
       })
-      .replace(",", "")}^FS
+      .replace(",", "");
 
-^FO220,160^BY2^BCN,80,Y,N,N^FD${deliveryData.barcode}^FS
+    // Handle dynamic linen types
+    let linenItems = "";
+    let startY = 360;
+    const lineHeight = 25;
 
-^FO170,290^A0N,25,25^FDDetail Pengiriman:^FS
-^FO170,325^GB400,0,2^FS
+    if (deliveryData.linenItems && Array.isArray(deliveryData.linenItems)) {
+      deliveryData.linenItems.forEach((item, index) => {
+        const yPos = startY + index * lineHeight;
 
-^FO170,350^A0N,22,22^FDKlien:^FS
-^FO320,350^A0N,22,22^FD${deliveryData.client}^FS
+        // Display linen name and quantity vertically in single column
+        linenItems += `^FO170,${yPos}^A0N,22,22^FD${index + 1}. ${item.name}: ${
+          item.quantity || "-"
+        }^FS\n`;
+      });
+    } else if (deliveryData.linenTypes) {
+      // Fallback for single linen type
+      linenItems = `^FO170,${startY}^A0N,22,22^FDLinen: ${deliveryData.linenTypes}^FS\n`;
+      startY += lineHeight;
+    }
 
-^FO170,385^A0N,22,22^FDRuangan:^FS
-^FO320,385^A0N,22,22^FD${deliveryData.room}^FS
+    // Calculate total height based on linen items
+    const numberOfLinenItems = deliveryData.linenItems
+      ? deliveryData.linenItems.length
+      : 1;
+    const totalLinenHeight = numberOfLinenItems * lineHeight;
+    const finalY = startY + totalLinenHeight + 35;
+    const labelHeight = Math.max(600, finalY + 50);
 
-^FO170,420^A0N,22,22^FDTotal Linen:^FS
-^FO320,420^A0N,22,22^FD${deliveryData.totalLinen}^FS
+    let zpl = `^XA
+^LL${labelHeight}
+^FO200,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
+^FO330,60^A0N,28,28^FD(Obsesiman)^FS
 
-^FO170,455^A0N,22,22^FDQty Linen:^FS
-^FO320,455^A0N,22,22^FD${deliveryData.qtyLinen}^FS
+^FO250,95^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
 
-^FO170,490^A0N,22,22^FDOperator:^FS
-^FO320,490^A0N,22,22^FD${deliveryData.operator}^FS
+^FO330,135^A0N,20,20^FD${currentDate}^FS
 
-^FO170,525^GB400,0,2^FS
-^FO330,555^A0N,20,20^FDTerima kasih^FS
+^FO170,160^A0N,25,25^FDDetail Pengiriman:^FS
+^FO170,195^GB400,0,2^FS
+
+^FO170,220^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}:^FS
+^FO320,220^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
+
+^FO170,255^A0N,22,22^FDKlien:^FS
+^FO320,255^A0N,22,22^FD${deliveryData.customer || "-"}^FS
+
+^FO170,290^A0N,22,22^FDRuangan:^FS
+^FO320,290^A0N,22,22^FD${deliveryData.room || "-"}^FS
+
+^FO170,325^A0N,22,22^FDTotal Linen:^FS
+^FO320,325^A0N,22,22^FD${deliveryData.totalLinen || "0"}^FS
+
+${linenItems}
+
+^FO170,${finalY}^GB400,0,2^FS
+^FO330,${finalY + 30}^A0N,20,20^FDTerima kasih^FS
 ^XZ`;
+
+    return zpl;
+  };
+
+  const printDeliveryLinen = () => {
+    if (!selectedDevice) {
+      alert("No printer selected!");
+      return;
+    }
+
+    // Sample data with dynamic linen items
+    const deliveryData = {
+      deliveryType: "Pengiriman Reguler",
+      customer: "RS PREMIER JATINEGARA",
+      room: "RUANG RAWAT INAP LT 3",
+      totalLinen: "45",
+      // Dynamic linen items - will be displayed in columns
+      linenItems: [
+        { name: "Handuk Besar", quantity: "15" },
+        { name: "Handuk Kecil", quantity: "8" },
+        { name: "Sprei Queen", quantity: "6" },
+        { name: "Sprei King", quantity: "4" },
+        { name: "Selimut Tebal", quantity: "5" },
+        { name: "Selimut Tipis", quantity: "3" },
+        { name: "Guling", quantity: "8" },
+        { name: "Bantal", quantity: "10" },
+        { name: "Sarung Bantal", quantity: "10" },
+        { name: "Keset Kamar", quantity: "4" },
+      ],
+      driverLabel: "Operator",
+      driverName: "Asep Santoso",
+    };
+
+    const zplCommand = generateDeliveryZPL(deliveryData);
 
     selectedDevice.send(
       zplCommand,

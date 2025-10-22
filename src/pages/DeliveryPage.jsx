@@ -67,18 +67,19 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     linens,
     getValidLinenCount,
     getInvalidLinenCount,
+    getInvalidRoomLinenCount,
     processScannedEPC,
     revalidateLinens,
     clearAllEPCs,
     updateLinenField,
-  } = useLinenData(baseUrl, formData.customerId);
+  } = useLinenData(baseUrl, formData.customerId, formData.roomId);
 
-  // Effect to reinitialize useLinenData when customerId changes
+  // Effect to reinitialize useLinenData when customerId or roomId changes
   useEffect(() => {
     if (formData.customerId) {
-      revalidateLinens(formData.customerId);
+      revalidateLinens(formData.customerId, formData.roomId);
     }
-  }, [formData.customerId, revalidateLinens]);
+  }, [formData.customerId, formData.roomId, revalidateLinens]);
 
   const { rooms, loadingRooms, fetchRooms, getRoomById } = useRooms(baseUrl);
 
@@ -197,7 +198,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     setFormData(newFormData);
 
     // Re-validate all existing linens when customer changes
-    revalidateLinens(selected?.customerId || "");
+    revalidateLinens(selected?.customerId || "", formData.roomId);
   };
 
   const handleClearAll = () => {
@@ -262,11 +263,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         setDeliverySubmitted(false);
         setLastDeliveryData(null);
       }, 200);
-
-      toast.success("Semua data delivery berhasil dibersihkan!", {
-        duration: 2000,
-        icon: "✅",
-      });
     } catch (error) {
       console.error("❌ Error clearing all data:", error);
       toast.error("Gagal membersihkan data!", {
@@ -311,13 +307,29 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       return;
     }
 
+    // Check for invalid room tags
+    const invalidRoomLinenCount = getInvalidRoomLinenCount();
+    if (invalidRoomLinenCount > 0) {
+      toast.error(
+        `Tidak dapat memproses! Ada ${invalidRoomLinenCount} tag yang tidak sesuai dengan ruangan yang dipilih.`,
+        {
+          duration: 4000,
+          icon: "❌",
+        }
+      );
+      return;
+    }
+
     try {
       // Get authentication token
       const token = await window.authAPI.getToken();
 
       // Filter valid linens
       const validLinens = linens.filter(
-        (linen) => linen.epc?.trim() && linen.isValidCustomer !== false
+        (linen) =>
+          linen.epc?.trim() &&
+          linen.isValidCustomer !== false &&
+          linen.isValidRoom !== false
       );
 
       if (validLinens.length === 0) {
@@ -335,7 +347,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         qty: validLinens.length,
         driverName: formData.driverName,
         plateNumber: formData.plateNumber,
-        roomId: formData.roomId, // Add room to payload
         linens: validLinens.map((linen) => ({
           epc: linen.epc,
           status_id: linen.statusId || 1,
@@ -368,36 +379,50 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       // Extract delivery number from API response
       const deliveryNumber = result.data?.deliveryNumber || "";
 
-      // Get linen types from existing data in the hook (no need for extra API calls)
+      // Get linen types and create linen items for dynamic display
       let linenTypes = "Berbagai Jenis";
-      try {
-        // Extract unique linen names from the existing linens data
-        const allLinenNames = validLinens
-          .map((linen) => linen.linenName || linen.linenTypeName || "Unknown")
-          .filter((name) => name && name.trim());
+      let linenItems = [];
 
-        // Get unique linen names
-        const uniqueLinenNames = [...new Set(allLinenNames)];
+      try {
+        // Group linens by type and count quantities
+        const linenCounts = {};
+        validLinens.forEach((linen) => {
+          const linenName = linen.linenName || linen.linenTypeName || "Unknown";
+          if (linenName && linenName.trim()) {
+            linenCounts[linenName] = (linenCounts[linenName] || 0) + 1;
+          }
+        });
+
+        // Create linen items array
+        linenItems = Object.entries(linenCounts).map(([name, quantity]) => ({
+          name: name,
+          quantity: quantity.toString()
+        }));
+
+        // Fallback to linenTypes string if needed
+        const uniqueLinenNames = Object.keys(linenCounts);
         if (uniqueLinenNames.length > 0) {
           linenTypes = uniqueLinenNames.join(", ");
         }
 
-        console.log("📋 Extracted linen types from existing data:", linenTypes);
+        console.log("📋 Extracted linen items for printing:", linenItems);
       } catch (error) {
-        console.error("Error extracting linen types:", error);
-        // Keep default value if extraction fails
+        console.error("Error extracting linen items:", error);
+        // Keep default values if extraction fails
       }
 
-      // Store delivery data for printing
+      // Store delivery data for printing with dynamic linen items
       const deliveryData = {
         deliveryNumber: deliveryNumber,
         customer: formData.customerName,
-        room: formData.driverName,
+        room: rooms.find((r) => r.roomId === formData.roomId)?.roomName || "-",
         totalLinen: validLinens.length.toString(),
         plateNumber: formData.plateNumber,
         deliveryType: currentDeliveryType.title,
-        driverLabel: "Driver",
+        driverLabel: "Operator",
+        driverName: formData.driverName,
         linenTypes: linenTypes,
+        linenItems: linenItems, // Add dynamic linen items array
       };
 
       // Set the state first
@@ -538,7 +563,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   };
 
   const getRowColor = (linen) => {
-    if (linen.isValidCustomer === false) {
+    if (linen.isValidCustomer === false || linen.isValidRoom === false) {
       return "bg-red-50 border-red-200";
     }
     if (linen.epc) {
@@ -715,7 +740,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : isDeliveryActive
                     ? "bg-red-600 hover:bg-red-700"
-                    : "bg-blue-600 hover:bg-blue-700"
+                    : "bg-primary hover:bg-blue-700"
                 }`}
                 disabled={!isRfidAvailable}
               >
@@ -743,6 +768,18 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               </div>
             )}
 
+            {/* Warning message for invalid rooms */}
+            {formData.roomId &&
+              getInvalidRoomLinenCount &&
+              getInvalidRoomLinenCount() > 0 && (
+                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-700">
+                    ⚠️ Terdapat {getInvalidRoomLinenCount()} tag yang tidak
+                    sesuai dengan ruangan yang dipilih.
+                  </p>
+                </div>
+              )}
+
             {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full border border-gray-300 rounded-lg">
@@ -755,10 +792,13 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                       EPC
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Status
+                      Customer Info
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Customer Info
+                      Room
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                      Status
                     </th>
                   </tr>
                 </thead>
@@ -786,6 +826,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                                 ✗ Invalid
                               </span>
                             )}
+                            {linen.isValidRoom === false && (
+                              <span className="ml-2 text-xs text-red-600">
+                                ✗ Wrong Room
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 border-b">
                             <input
@@ -794,13 +839,38 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                               readOnly
                               placeholder="Auto-filled dari scan RFID"
                               className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
-                                linen.isValidCustomer === false
+                                linen.isValidCustomer === false ||
+                                linen.isValidRoom === false
                                   ? "border-red-300 bg-red-50"
                                   : linen.epc
                                   ? "bg-green-50 border-green-300"
                                   : "border-gray-300"
                               }`}
                             />
+                          </td>
+
+                          <td className="px-4 py-3 border-b">
+                            {linen.isValidCustomer === false &&
+                            linen.errorMessage ? (
+                              <div className="text-xs text-red-600">
+                                {linen.errorMessage}
+                              </div>
+                            ) : linen.customerName ? (
+                              <div className="text-xs text-green-600">
+                                {linen.customerName}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400">-</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 border-b">
+                            {linen.roomName ? (
+                              <div className="text-xs text-gray-700">
+                                {linen.roomName}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400">-</div>
+                            )}
                           </td>
                           <td className="px-4 py-3 border-b">
                             {linen.loading ? (
@@ -820,20 +890,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-3 border-b">
-                            {linen.isValidCustomer === false &&
-                            linen.errorMessage ? (
-                              <div className="text-xs text-red-600">
-                                {linen.errorMessage}
-                              </div>
-                            ) : linen.customerName ? (
-                              <div className="text-xs text-green-600">
-                                {linen.customerName}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-gray-400">-</div>
-                            )}
-                          </td>
                         </tr>
                       );
                     })}
@@ -849,12 +905,14 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               disabled={
                 !formData.customerId ||
                 !formData.driverName.trim() ||
-                getValidLinenCount() === 0
+                getValidLinenCount() === 0 ||
+                (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0)
               }
               className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                 !formData.customerId ||
                 !formData.driverName.trim() ||
-                getValidLinenCount() === 0
+                getValidLinenCount() === 0 ||
+                (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0)
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-400 text-white"
               }`}

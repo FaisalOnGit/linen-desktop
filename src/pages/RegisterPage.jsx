@@ -19,6 +19,8 @@ const RegisterPage = ({ rfidHook }) => {
   const [formData, setFormData] = useState({
     customerId: "",
     customerName: "",
+    roomId: "",
+    roomName: "",
     linenId: "",
     rfidRegisterDescription: "-", // Hardcoded value
   });
@@ -69,12 +71,23 @@ const RegisterPage = ({ rfidHook }) => {
       ...formData,
       customerId: selected?.customerId || "",
       customerName: selected?.customerName || "",
+      roomId: "", // Reset room when customer changes
+      roomName: "", // Reset room name when customer changes
     };
     setFormData(newFormData);
   };
 
   const handleLinenChange = (index, field, value) => {
     updateLinenField(index, field, value);
+  };
+
+  const handleRoomChange = (selected) => {
+    const newFormData = {
+      ...formData,
+      roomId: selected?.roomId || "",
+      roomName: selected?.roomName || "",
+    };
+    setFormData(newFormData);
   };
 
   const handleRemoveLinenRow = (index) => {
@@ -93,7 +106,9 @@ const RegisterPage = ({ rfidHook }) => {
   };
 
   const handleClearAll = () => {
-    console.log("🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()");
+    console.log(
+      "🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()"
+    );
 
     try {
       // Stop RFID scanning first to prevent immediate re-population
@@ -117,6 +132,8 @@ const RegisterPage = ({ rfidHook }) => {
       setFormData({
         customerId: formData.customerId, // Keep customer selection
         customerName: formData.customerName, // Keep customer name
+        roomId: formData.roomId, // Keep room selection
+        roomName: formData.roomName, // Keep room name
         linenId: "",
         rfidRegisterDescription: "-", // Keep hardcoded value
       });
@@ -141,11 +158,6 @@ const RegisterPage = ({ rfidHook }) => {
           rfidHook.clearAllData();
         }
       }, 200);
-
-      toast.success("Semua data registrasi berhasil dibersihkan!", {
-        duration: 2000,
-        icon: "✅",
-      });
     } catch (error) {
       console.error("❌ Error clearing all data:", error);
       toast.error("Gagal membersihkan data!", {
@@ -169,12 +181,17 @@ const RegisterPage = ({ rfidHook }) => {
           linen.linenId?.trim() || linen.epc?.trim() || linen.roomId?.trim()
       );
 
-      // Create payload
+      // Create payload - tambahkan roomId ke setiap linen untuk body request tetap sama
+      const linensWithRoom = validLinens.map((linen) => ({
+        ...linen,
+        roomId: formData.roomId || linen.roomId, // Gunakan room dari form atau linen existing
+      }));
+
       const payload = {
         customerId: formData.customerId,
         rfidRegisterDescription: formData.rfidRegisterDescription,
         locationId: "LOC001",
-        linens: validLinens,
+        linens: linensWithRoom,
       };
 
       console.log("Payload dikirim:", payload);
@@ -204,6 +221,8 @@ const RegisterPage = ({ rfidHook }) => {
       setFormData({
         customerId: "",
         customerName: "",
+        roomId: "",
+        roomName: "",
         linenId: "",
         rfidRegisterDescription: "-", // Reset to hardcoded value
       });
@@ -274,8 +293,8 @@ const RegisterPage = ({ rfidHook }) => {
     <div className="font-poppins">
       <div className="bg-white rounded-lg shadow-lg p-6 font-poppins">
         <div className="space-y-6">
-          {/* Customer Info */}
-          <div className="grid grid-cols-1 gap-6">
+          {/* Customer & Room Info */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="relative z-40">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Customer
@@ -320,13 +339,52 @@ const RegisterPage = ({ rfidHook }) => {
                 }}
               />
             </div>
+
+            <div className="relative z-40">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pilih Room
+              </label>
+              <Select
+                value={formData.roomId ? getRoomById(formData.roomId) : null}
+                onChange={handleRoomChange}
+                options={rooms}
+                getOptionLabel={(room) => `${room.roomName} (${room.roomId})`}
+                getOptionValue={(room) => room.roomId}
+                placeholder="Pilih room..."
+                isClearable
+                isSearchable
+                isLoading={loadingRooms}
+                noOptionsMessage={() => "Room tidak ditemukan"}
+                className="w-full"
+                classNamePrefix="react-select"
+                menuPortalTarget={document.body}
+                menuPortalStyle={{ zIndex: 9998 }}
+                styles={{
+                  control: (baseStyles, state) => ({
+                    ...baseStyles,
+                    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+                    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
+                    fontSize: "14px",
+                    minHeight: "38px",
+                  }),
+                  option: (baseStyles) => ({
+                    ...baseStyles,
+                    fontSize: "14px",
+                  }),
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9998,
+                  }),
+                }}
+              />
+            </div>
           </div>
 
-          {/* EPC, Linen & Room Table Section */}
+          {/* EPC & Linen Table Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Data EPC, Linen & Room
+                Data EPC & Linen
               </label>
               <div className="flex gap-2">
                 <button
@@ -367,7 +425,7 @@ const RegisterPage = ({ rfidHook }) => {
               </button>
             </div>
 
-            {/* EPC, Linen & Room Table */}
+            {/* EPC & Linen Table */}
             <div className="overflow-x-auto relative z-50">
               <table className="w-full border border-gray-300 rounded-lg">
                 <thead>
@@ -380,9 +438,6 @@ const RegisterPage = ({ rfidHook }) => {
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Linen
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Room ID
                     </th>
                   </tr>
                 </thead>
@@ -459,56 +514,6 @@ const RegisterPage = ({ rfidHook }) => {
                           />
                         </div>
                       </td>
-                      <td className="px-4 py-3 border-b relative">
-                        <div className="relative">
-                          <Select
-                            value={
-                              linen.roomId ? getRoomById(linen.roomId) : null
-                            }
-                            onChange={(selected) =>
-                              handleLinenChange(
-                                index,
-                                "roomId",
-                                selected?.roomId || ""
-                              )
-                            }
-                            options={rooms}
-                            getOptionLabel={(room) =>
-                              `${room.roomName} (${room.roomId})`
-                            }
-                            getOptionValue={(room) => room.roomId}
-                            placeholder="Pilih room..."
-                            isClearable
-                            isSearchable
-                            noOptionsMessage={() => "Room tidak ditemukan"}
-                            className="w-full"
-                            classNamePrefix="react-select"
-                            menuPortalTarget={document.body}
-                            menuPortalStyle={{ zIndex: 9999 }}
-                            styles={{
-                              control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                borderColor: state.isFocused
-                                  ? "#3b82f6"
-                                  : "#d1d5db",
-                                boxShadow: state.isFocused
-                                  ? "0 0 0 1px #3b82f6"
-                                  : "none",
-                                fontSize: "13px",
-                                minHeight: "32px",
-                              }),
-                              option: (baseStyles) => ({
-                                ...baseStyles,
-                                fontSize: "13px",
-                              }),
-                              menuPortal: (base) => ({
-                                ...base,
-                                zIndex: 9999,
-                              }),
-                            }}
-                          />
-                        </div>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -522,13 +527,15 @@ const RegisterPage = ({ rfidHook }) => {
               disabled={
                 !isFormValid(
                   formData.customerId,
-                  formData.rfidRegisterDescription
+                  formData.rfidRegisterDescription,
+                  formData.roomId
                 )
               }
               className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                 isFormValid(
                   formData.customerId,
-                  formData.rfidRegisterDescription
+                  formData.rfidRegisterDescription,
+                  formData.roomId
                 )
                   ? "bg-primary hover:bg-blue-400 text-white cursor-pointer"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"

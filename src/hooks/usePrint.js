@@ -104,26 +104,65 @@ const usePrint = () => {
       })
       .replace(",", "");
 
-    return `^XA
-^LL700
-^FO200,20^BY3^BCN,60,Y,N,N^FD${deliveryData.deliveryNumber || "N/A"}^FS
-^FO200,130^A0N,30,30^FDPT JALIN MITRA NUSANTARA^FS
-^FO250,160^A0N,20,20^FD(Obsesiman)^FS
-^FO200,190^A0N,28,28^FD${deliveryData.deliveryType || "Delivery Linen"}^FS
-^FO100,240^A0N,22,22^FDKlien: ${deliveryData.customer}^FS
-^FO100,270^A0N,20,20^FD${currentDate}^FS
-^FO50,300^GB400,2,2^FS
-^FO100,320^A0N,22,22^FDTotal Linen Terbaca: ${deliveryData.totalLinen}^FS
-^FO100,350^A0N,22,22^FDTotal Linen Transaksi: ${deliveryData.totalLinen}^FS
-^FO100,380^A0N,22,22^FDNama Linen: ${deliveryData.linenTypes || "-"}^FS
-^FO100,410^GB400,2,2^FS
-^FO100,430^A0N,22,22^FD${deliveryData.driverLabel || "Driver"}: ${
-      deliveryData.room
-    }^FS
-^FO100,460^A0N,22,22^FDNo. Polisi: ${deliveryData.plateNumber || ""}^FS
-^FO100,490^GB400,2,2^FS
-^FO200,530^A0N,20,20^FDTerima kasih^FS
+    // Handle dynamic linen types
+    let linenItems = "";
+    let startY = 360;
+    const lineHeight = 25;
+
+    if (deliveryData.linenItems && Array.isArray(deliveryData.linenItems)) {
+      deliveryData.linenItems.forEach((item, index) => {
+        const yPos = startY + index * lineHeight;
+
+        // Display linen name and quantity vertically in single column
+        linenItems += `^FO170,${yPos}^A0N,22,22^FD${index + 1}. ${
+          item.name
+        }: ${item.quantity || "-"}^FS\n`;
+      });
+    } else if (deliveryData.linenTypes) {
+      // Fallback for single linen type
+      linenItems = `^FO170,${startY}^A0N,22,22^FDLinen: ${deliveryData.linenTypes}^FS\n`;
+      startY += lineHeight;
+    }
+
+    // Calculate total height based on linen items
+    const numberOfLinenItems = deliveryData.linenItems
+      ? deliveryData.linenItems.length
+      : 1;
+    const totalLinenHeight = numberOfLinenItems * lineHeight;
+    const finalY = startY + totalLinenHeight + 35;
+    const labelHeight = Math.max(600, finalY + 50);
+
+    let zpl = `^XA
+^LL${labelHeight}
+^FO200,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
+^FO330,60^A0N,28,28^FD(Obsesiman)^FS
+
+^FO250,95^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
+
+^FO330,135^A0N,20,20^FD${currentDate}^FS
+
+^FO170,160^A0N,25,25^FDDetail Pengiriman:^FS
+^FO170,195^GB400,0,2^FS
+
+^FO170,220^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}:^FS
+^FO320,220^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
+
+^FO170,255^A0N,22,22^FDKlien:^FS
+^FO320,255^A0N,22,22^FD${deliveryData.customer || "-"}^FS
+
+^FO170,290^A0N,22,22^FDRuangan:^FS
+^FO320,290^A0N,22,22^FD${deliveryData.room || "-"}^FS
+
+^FO170,325^A0N,22,22^FDTotal Linen:^FS
+^FO320,325^A0N,22,22^FD${deliveryData.totalLinen || "0"}^FS
+
+${linenItems}
+
+^FO170,${finalY}^GB400,0,2^FS
+^FO330,${finalY + 30}^A0N,20,20^FDTerima kasih^FS
 ^XZ`;
+
+    return zpl;
   };
 
   const printDeliveryLabel = (deliveryData) => {

@@ -131,15 +131,15 @@ export const useRegisterData = () => {
     ).length;
   }, [linens]);
 
-  // Get count of complete linens (with all required fields)
+  // Get count of complete linens (with linenId and epc, roomId is now handled separately)
   const getCompleteLinenCount = useCallback(() => {
     return linens.filter(
-      (linen) => linen.linenId?.trim() && linen.epc?.trim() && linen.roomId?.trim()
+      (linen) => linen.linenId?.trim() && linen.epc?.trim()
     ).length;
   }, [linens]);
 
   // Check if form is valid
-  const isFormValid = useCallback((customerId, description) => {
+  const isFormValid = useCallback((customerId, description, roomId) => {
     // Check if customer is selected
     if (!customerId?.trim()) {
       return false;
@@ -150,7 +150,12 @@ export const useRegisterData = () => {
       return false;
     }
 
-    // Check if there's at least one complete linen row
+    // Check if room is selected (now required)
+    if (!roomId?.trim()) {
+      return false;
+    }
+
+    // Check if there's at least one complete linen row (linenId + epc)
     return getCompleteLinenCount() > 0;
   }, [getCompleteLinenCount]);
 
