@@ -101,7 +101,7 @@ function PrintTestPage() {
 
     // Handle dynamic linen types
     let linenItems = "";
-    let startY = 360;
+    let startY = 390;
     const lineHeight = 25;
 
     if (deliveryData.linenItems && Array.isArray(deliveryData.linenItems)) {
@@ -109,13 +109,13 @@ function PrintTestPage() {
         const yPos = startY + index * lineHeight;
 
         // Display linen name and quantity vertically in single column
-        linenItems += `^FO170,${yPos}^A0N,22,22^FD${index + 1}. ${item.name}: ${
+        linenItems += `^FO70,${yPos}^A0N,22,22^FD* ${item.name}: ${
           item.quantity || "-"
         }^FS\n`;
       });
     } else if (deliveryData.linenTypes) {
       // Fallback for single linen type
-      linenItems = `^FO170,${startY}^A0N,22,22^FDLinen: ${deliveryData.linenTypes}^FS\n`;
+      linenItems = `^FO70,${startY}^A0N,22,22^FDLinen: ${deliveryData.linenTypes}^FS\n`;
       startY += lineHeight;
     }
 
@@ -129,32 +129,32 @@ function PrintTestPage() {
 
     let zpl = `^XA
 ^LL${labelHeight}
-^FO200,20^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
-^FO330,60^A0N,28,28^FD(Obsesiman)^FS
+^FO100,50^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
+^FO220,90^A0N,28,28^FD(Obsesiman)^FS
 
-^FO250,95^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
+^FO150,125^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
 
-^FO330,135^A0N,20,20^FD${currentDate}^FS
+^FO230,165^A0N,20,20^FD${currentDate}^FS
 
-^FO170,160^A0N,25,25^FDDetail Pengiriman:^FS
-^FO170,195^GB400,0,2^FS
+^FO70,190^A0N,25,25^FDDetail Pengiriman:^FS
+^FO70,225^GB480,0,2^FS
 
-^FO170,220^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}:^FS
-^FO320,220^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
+^FO70,250^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}:^FS
+^FO270,250^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
 
-^FO170,255^A0N,22,22^FDKlien:^FS
-^FO320,255^A0N,22,22^FD${deliveryData.customer || "-"}^FS
+^FO70,285^A0N,22,22^FDKlien:^FS
+^FO270,285^A0N,22,22^FD${deliveryData.customer || "-"}^FS
 
-^FO170,290^A0N,22,22^FDRuangan:^FS
-^FO320,290^A0N,22,22^FD${deliveryData.room || "-"}^FS
+^FO70,320^A0N,22,22^FDRuangan:^FS
+^FO270,320^A0N,22,22^FD${deliveryData.room || "-"}^FS
 
-^FO170,325^A0N,22,22^FDTotal Linen:^FS
-^FO320,325^A0N,22,22^FD${deliveryData.totalLinen || "0"}^FS
+^FO70,355^A0N,22,22^FDTotal Linen:^FS
+^FO270,355^A0N,22,22^FD${deliveryData.totalLinen || "0"}^FS
 
 ${linenItems}
 
-^FO170,${finalY}^GB400,0,2^FS
-^FO330,${finalY + 30}^A0N,20,20^FDTerima kasih^FS
+^FO70,${finalY}^GB480,0,2^FS
+^FO220,${finalY + 30}^A0N,20,20^FDTerima kasih^FS
 ^XZ`;
 
     return zpl;

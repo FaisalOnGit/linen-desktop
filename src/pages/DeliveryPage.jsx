@@ -37,6 +37,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
   const [deliverySubmitted, setDeliverySubmitted] = useState(false);
   const [lastDeliveryData, setLastDeliveryData] = useState(null);
+  const [submitDisabled, setSubmitDisabled] = useState(false);
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
@@ -118,7 +119,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         deliveryTags.forEach((tag, index) => {
           if (tag && tag.EPC) {
             console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
-            processScannedEPC(tag.EPC, formData.customerId);
+            processScannedEPC(tag.EPC, formData.customerId, formData.roomId);
           }
         });
       } catch (error) {
@@ -178,6 +179,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     // Reset delivery submission state
     setDeliverySubmitted(false);
     setLastDeliveryData(null);
+    setSubmitDisabled(false);
   }, [deliveryType]);
 
   // Form handlers
@@ -234,6 +236,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       // Reset delivery submission state
       setDeliverySubmitted(false);
       setLastDeliveryData(null);
+      setSubmitDisabled(false);
 
       // Force multiple state updates to ensure complete clearing
       setTimeout(() => {
@@ -248,6 +251,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         // Reset delivery submission state again
         setDeliverySubmitted(false);
         setLastDeliveryData(null);
+        setSubmitDisabled(false);
       }, 50);
 
       setTimeout(() => {
@@ -262,6 +266,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         // Final delivery submission state reset
         setDeliverySubmitted(false);
         setLastDeliveryData(null);
+        setSubmitDisabled(false);
       }, 200);
     } catch (error) {
       console.error("❌ Error clearing all data:", error);
@@ -396,7 +401,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         // Create linen items array
         linenItems = Object.entries(linenCounts).map(([name, quantity]) => ({
           name: name,
-          quantity: quantity.toString()
+          quantity: quantity.toString(),
         }));
 
         // Fallback to linenTypes string if needed
@@ -428,6 +433,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       // Set the state first
       setLastDeliveryData(deliveryData);
       setDeliverySubmitted(true);
+      setSubmitDisabled(true);
 
       toast.success(successMessage, {
         duration: 4000,
@@ -806,7 +812,10 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                       Customer Info
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Room
+                      Nama Linen
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                      Ruangan
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Status
@@ -875,6 +884,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                             )}
                           </td>
                           <td className="px-4 py-3 border-b">
+                            {linen.linenName || linen.linenTypeName ? (
+                              <div className="text-sm text-gray-700">
+                                {linen.linenName || linen.linenTypeName}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-400">-</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 border-b">
                             {linen.roomName ? (
                               <div className="text-xs text-gray-700">
                                 {linen.roomName}
@@ -917,20 +935,27 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 !formData.customerId ||
                 !formData.driverName.trim() ||
                 getValidLinenCount() === 0 ||
-                (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0)
+                (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0) ||
+                submitDisabled
               }
               className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                 !formData.customerId ||
                 !formData.driverName.trim() ||
                 getValidLinenCount() === 0 ||
-                (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0)
+                (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0) ||
+                submitDisabled
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-400 text-white"
+                  : "bg-primary hover:bg-blue-400 text-white"
               }`}
             >
               <Truck size={16} />
-              Proses {currentDeliveryType.title} ({getValidLinenCount()} valid
-              items)
+              {submitDisabled
+                ? `✅ ${
+                    currentDeliveryType.title
+                  } Berhasil (${getValidLinenCount()} items)`
+                : `Proses ${
+                    currentDeliveryType.title
+                  } (${getValidLinenCount()} valid items)`}
             </button>
           </div>
         </div>

@@ -79,9 +79,7 @@ const App = () => {
         {activePage === "login" ? (
           renderActivePage()
         ) : (
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            {renderActivePage()}
-          </div>
+          <div className="w-full mx-auto px-4 py-6">{renderActivePage()}</div>
         )}
 
         {/* Toast Notification Container */}
