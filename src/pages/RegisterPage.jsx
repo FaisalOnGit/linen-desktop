@@ -487,7 +487,7 @@ const RegisterPage = ({ rfidHook }) => {
                     type="text"
                     value={formData.linenQty}
                     disabled
-                    className="w-12 border border-gray-300 rounded-lg px-3 py-1 text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                    className="w-16 border border-gray-300 rounded-lg px-3 py-1 text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
                     placeholder="0"
                   />
                 </div>
