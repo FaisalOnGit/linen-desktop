@@ -4,6 +4,8 @@ function PrintTestPage() {
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [devices, setDevices] = useState([]);
   const [status, setStatus] = useState("Loading...");
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewZPL, setPreviewZPL] = useState("");
 
   useEffect(() => {
     // Setup Zebra printer on component mount
@@ -101,7 +103,7 @@ function PrintTestPage() {
 
     // Handle dynamic linen types
     let linenItems = "";
-    let startY = 390;
+    let startY = 325;
     const lineHeight = 25;
 
     if (deliveryData.linenItems && Array.isArray(deliveryData.linenItems)) {
@@ -139,17 +141,14 @@ function PrintTestPage() {
 ^FO70,190^A0N,25,25^FDDetail Pengiriman:^FS
 ^FO70,225^GB480,0,2^FS
 
-^FO70,250^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}:^FS
-^FO270,250^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
+^FO70,250^A0N,22,22^FDKlien: ${deliveryData.customer || "-"}^FS
 
-^FO70,285^A0N,22,22^FDKlien:^FS
-^FO270,285^A0N,22,22^FD${deliveryData.customer || "-"}^FS
+^FO70,275^A0N,22,22^FDRuangan: ${deliveryData.room || "-"}^FS
 
-^FO70,320^A0N,22,22^FDRuangan:^FS
-^FO270,320^A0N,22,22^FD${deliveryData.room || "-"}^FS
+^FO70,300^A0N,22,22^FDTotal Linen: ${deliveryData.totalLinen || "0"}^FS
 
-^FO70,355^A0N,22,22^FDTotal Linen:^FS
-^FO270,355^A0N,22,22^FD${deliveryData.totalLinen || "0"}^FS
+^FO450,250^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}^FS
+^FO450,275^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
 
 ${linenItems}
 
@@ -201,6 +200,35 @@ ${linenItems}
         alert("Error: " + error);
       }
     );
+  };
+
+  const previewDeliveryLinen = () => {
+    // Sample data with dynamic linen items
+    const deliveryData = {
+      deliveryType: "Pengiriman Reguler",
+      customer: "RS PREMIER JATINEGARA",
+      room: "RUANG RAWAT INAP LT 3",
+      totalLinen: "45",
+      // Dynamic linen items - will be displayed in columns
+      linenItems: [
+        { name: "Handuk Besar", quantity: "15" },
+        { name: "Handuk Kecil", quantity: "8" },
+        { name: "Sprei Queen", quantity: "6" },
+        { name: "Sprei King", quantity: "4" },
+        { name: "Selimut Tebal", quantity: "5" },
+        { name: "Selimut Tipis", quantity: "3" },
+        { name: "Guling", quantity: "8" },
+        { name: "Bantal", quantity: "10" },
+        { name: "Sarung Bantal", quantity: "10" },
+        { name: "Keset Kamar", quantity: "4" },
+      ],
+      driverLabel: "Operator",
+      driverName: "Asep Santoso",
+    };
+
+    const zplCommand = generateDeliveryZPL(deliveryData);
+    setPreviewZPL(zplCommand);
+    setShowPreview(true);
   };
 
   const handleDeviceChange = (e) => {
@@ -288,19 +316,142 @@ ${linenItems}
             </div>
           )}
 
-          <button
-            onClick={printDeliveryLinen}
-            disabled={!selectedDevice}
-            className={`w-full px-6 py-3 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-              selectedDevice
-                ? "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            Print
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={previewDeliveryLinen}
+              className="flex-1 px-6 py-3 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+            >
+              Preview
+            </button>
+            <button
+              onClick={printDeliveryLinen}
+              disabled={!selectedDevice}
+              className={`flex-1 px-6 py-3 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                selectedDevice
+                  ? "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              Print
+            </button>
+          </div>
         </div>
       </div>
+
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl max-h-screen overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Print Preview
+              </h2>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  ZPL Command:
+                </h3>
+                <pre className="text-xs bg-white p-3 rounded border border-gray-200 overflow-x-auto whitespace-pre-wrap">
+                  {previewZPL}
+                </pre>
+              </div>
+
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  Visual Preview:
+                </h3>
+                <div
+                  className="bg-white border border-gray-400 rounded p-4"
+                  style={{
+                    width: "600px",
+                    minHeight: "400px",
+                    margin: "0 auto",
+                  }}
+                >
+                  <div className="text-center mb-4">
+                    <div className="text-2xl font-bold">
+                      PT JALIN MITRA NUSANTARA
+                    </div>
+                    <div className="text-lg text-gray-600">(Obsesiman)</div>
+                  </div>
+
+                  <div className="text-center mb-4">
+                    <div className="text-2xl font-bold">Pengiriman Reguler</div>
+                    <div className="text-sm text-gray-600">
+                      {new Date()
+                        .toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                        .replace(",", "")}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-b border-gray-400 py-2 mb-4">
+                    <div className="text-lg font-semibold mb-2">
+                      Detail Pengiriman:
+                    </div>
+
+                    <div className="flex justify-between">
+                      <div className="w-1/2">
+                        <div className="flex mb-2">
+                          <span className="w-20">Klien:</span>
+                          <span>RS PREMIER JATINEGARA</span>
+                        </div>
+                        <div className="flex mb-2">
+                          <span className="w-20">Ruangan:</span>
+                          <span>RUANG RAWAT INAP LT 3</span>
+                        </div>
+                        <div className="flex mb-2">
+                          <span className="w-20">Total Linen:</span>
+                          <span>45</span>
+                        </div>
+
+                        <div className="mt-4">
+                          <div className="font-semibold mb-2">
+                            Rincian Linen:
+                          </div>
+                          <div className="text-sm space-y-1">
+                            <div>* Handuk Besar: 15</div>
+                            <div>* Handuk Kecil: 8</div>
+                            <div>* Sprei Queen: 6</div>
+                            <div>* Sprei King: 4</div>
+                            <div>* Selimut Tebal: 5</div>
+                            <div>* Selimut Tipis: 3</div>
+                            <div>* Guling: 8</div>
+                            <div>* Bantal: 10</div>
+                            <div>* Sarung Bantal: 10</div>
+                            <div>* Keset Kamar: 4</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="w-1/2 text-right mt-8">
+                        <div className="font-semibold">Operator</div>
+                        <div>Asep Santoso</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-sm text-gray-600">
+                    Terima kasih
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

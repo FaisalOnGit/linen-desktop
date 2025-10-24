@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { useLinenData } from "../hooks/useLinenData";
 import { useCustomers } from "../hooks/useCustomers";
 
-const Scanning = ({ rfidHook }) => {
+const LinenPending = ({ rfidHook }) => {
   const {
     linenBersihTags = [],
     startLinenBersih,
@@ -513,4 +513,4 @@ const Scanning = ({ rfidHook }) => {
   );
 };
 
-export default Scanning;
+export default LinenPending;

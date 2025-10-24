@@ -362,10 +362,16 @@ const FinalCheckPage = ({ rfidHook }) => {
                       EPC
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Status
+                      Customer Info
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Customer Info
+                      Nama Linen
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                      Ruangan
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                      Status
                     </th>
                   </tr>
                 </thead>
@@ -409,6 +415,42 @@ const FinalCheckPage = ({ rfidHook }) => {
                               }`}
                             />
                           </td>
+
+                          <td className="px-4 py-3 border-b">
+                            {linen.isValidCustomer === false &&
+                            linen.errorMessage ? (
+                              <div className="text-xs text-red-600">
+                                {linen.errorMessage}
+                              </div>
+                            ) : linen.customerName ? (
+                              <div className="text-xs text-green-600">
+                                {linen.customerName}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400">-</div>
+                            )}
+                          </td>
+
+                          <td className="px-4 py-3 border-b">
+                            {linen.linenName || linen.linenTypeName ? (
+                              <div className="text-sm text-gray-700">
+                                {linen.linenName || linen.linenTypeName}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-400">-</div>
+                            )}
+                          </td>
+
+                          <td className="px-4 py-3 border-b">
+                            {linen.roomName ? (
+                              <div className="text-xs text-gray-700">
+                                {linen.roomName}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400">-</div>
+                            )}
+                          </td>
+
                           <td className="px-4 py-3 border-b">
                             {linen.loading ? (
                               <div className="flex items-center justify-center">
@@ -425,20 +467,6 @@ const FinalCheckPage = ({ rfidHook }) => {
                               >
                                 {linen.status || "Unknown"}
                               </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 border-b">
-                            {linen.isValidCustomer === false &&
-                            linen.errorMessage ? (
-                              <div className="text-xs text-red-600">
-                                {linen.errorMessage}
-                              </div>
-                            ) : linen.customerName ? (
-                              <div className="text-xs text-green-600">
-                                {linen.customerName}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-gray-400">-</div>
                             )}
                           </td>
                         </tr>
