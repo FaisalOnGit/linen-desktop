@@ -23,6 +23,7 @@ const RegisterPage = ({ rfidHook }) => {
     roomName: "",
     linenId: "",
     rfidRegisterDescription: "-", // Hardcoded value
+    linenQty: 0, // Quantity of scanned linens
   });
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
@@ -52,6 +53,66 @@ const RegisterPage = ({ rfidHook }) => {
   useEffect(() => {
     handleRegisterTags(registerTags, isRegisterActive);
   }, [registerTags, isRegisterActive, handleRegisterTags]);
+
+  // Fetch today's linen register count
+  const fetchTodayLinenCount = async () => {
+    try {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split("T")[0];
+
+      // Get token from authAPI
+      const token = await window.authAPI.getToken();
+
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      const response = await fetch(
+        `${baseUrl}/Report/dashboard/ReportLinenRegister?dateStart=${today}&dateEnd=${today}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error(
+          "Failed to fetch today's linen count:",
+          response.statusText
+        );
+        return;
+      }
+
+      const result = await response.json();
+      console.log("Today's linen register data:", result);
+
+      if (result.success && result.count !== undefined) {
+        setFormData((prev) => ({
+          ...prev,
+          linenQty: result.count,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching today's linen count:", error);
+    }
+  };
+
+  // Fetch today's linen count on component mount
+  useEffect(() => {
+    fetchTodayLinenCount();
+  }, []);
+
+  // Refresh today's linen count after successful registration
+  useEffect(() => {
+    if (linens.some((linen) => linen.epc?.trim())) {
+      // If there are newly scanned linens, refresh the count
+      fetchTodayLinenCount();
+    }
+  }, [linens]);
 
   // Effect untuk fetch rooms ketika customerId berubah
   useEffect(() => {
@@ -129,14 +190,18 @@ const RegisterPage = ({ rfidHook }) => {
 
       // Reset form data completely (like tab switching) - keep customer
       console.log("🔄 Resetting form data completely...");
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         customerId: formData.customerId, // Keep customer selection
         customerName: formData.customerName, // Keep customer name
         roomId: formData.roomId, // Keep room selection
         roomName: formData.roomName, // Keep room name
         linenId: "",
         rfidRegisterDescription: "-", // Keep hardcoded value
-      });
+      }));
+
+      // Refresh today's linen count after clearing
+      fetchTodayLinenCount();
 
       // Force multiple state updates to ensure complete clearing
       setTimeout(() => {
@@ -225,6 +290,7 @@ const RegisterPage = ({ rfidHook }) => {
         roomName: "",
         linenId: "",
         rfidRegisterDescription: "-", // Reset to hardcoded value
+        linenQty: 0, // Reset quantity
       });
 
       // Use rfidHook.clearAllData() for complete state reset
@@ -247,6 +313,9 @@ const RegisterPage = ({ rfidHook }) => {
       if (formData.customerId) {
         fetchRooms(formData.customerId);
       }
+
+      // Refresh today's linen count after successful registration
+      fetchTodayLinenCount();
 
       toast.success(successMessage, {
         duration: 4000,
@@ -295,7 +364,7 @@ const RegisterPage = ({ rfidHook }) => {
         <div className="space-y-6">
           {/* Customer & Room Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="relative z-40">
+            <div className="lg:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Customer
               </label>
@@ -340,7 +409,7 @@ const RegisterPage = ({ rfidHook }) => {
               />
             </div>
 
-            <div className="relative z-40">
+            <div className="lg:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Room
               </label>
@@ -382,47 +451,57 @@ const RegisterPage = ({ rfidHook }) => {
 
           {/* EPC & Linen Table Section */}
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Data EPC & Linen
-              </label>
-              <div className="flex gap-2">
+            <div className="flex justify-between items-end mb-4">
+              <div>
                 <button
                   type="button"
-                  onClick={handleClearAll}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
+                  onClick={handleToggleScan}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
+                    !isRfidAvailable
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : isRegisterActive
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-primary hover:bg-blue-700"
+                  }`}
+                  disabled={!isRfidAvailable}
                 >
-                  <Trash2 size={14} />
-                  <span>Clear All</span>
+                  {isRegisterActive ? (
+                    <>
+                      <Square size={16} />
+                      Stop Scan
+                    </>
+                  ) : (
+                    <>
+                      <Play size={16} />
+                      Start Scan
+                    </>
+                  )}
                 </button>
               </div>
-            </div>
-
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={handleToggleScan}
-                className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
-                  !isRfidAvailable
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : isRegisterActive
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-primary hover:bg-blue-700"
-                }`}
-                disabled={!isRfidAvailable}
-              >
-                {isRegisterActive ? (
-                  <>
-                    <Square size={16} />
-                    Stop Scan
-                  </>
-                ) : (
-                  <>
-                    <Play size={16} />
-                    Start Scan
-                  </>
-                )}
-              </button>
+              <div className="flex items-end gap-4">
+                <div className="flex items-center gap-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Total Linen Registrasi RFID hari ini.
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.linenQty}
+                    disabled
+                    className="w-12 border border-gray-300 rounded-lg px-3 py-1 text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="mr-3">
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-medium flex items-center space-x-1 text-sm"
+                  >
+                    <Trash2 size={14} />
+                    <span>Clear All</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* EPC & Linen Table */}
@@ -434,7 +513,7 @@ const RegisterPage = ({ rfidHook }) => {
                       No
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      EPC
+                      RFID
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Linen

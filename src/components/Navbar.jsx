@@ -14,6 +14,7 @@ import {
   Search,
   Tags,
   PackageOpen,
+  Clock,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
 
@@ -156,6 +157,18 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               icon: Search,
               size: "large",
               description: "Final check linen validation",
+            },
+          ],
+        },
+        {
+          title: "Pending",
+          commands: [
+            {
+              id: "linen-pending",
+              label: "Linen\nPending",
+              icon: Clock,
+              size: "large",
+              description: "View pending linen items",
             },
           ],
         },

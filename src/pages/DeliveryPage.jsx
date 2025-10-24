@@ -688,9 +688,32 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           {/* Linen Table Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Data Linen (EPC & Status)
-              </label>
+              <div>
+                <button
+                  type="button"
+                  onClick={handleToggleScan}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
+                    !isRfidAvailable
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : isDeliveryActive
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-primary hover:bg-blue-700"
+                  }`}
+                  disabled={!isRfidAvailable}
+                >
+                  {isDeliveryActive ? (
+                    <>
+                      <Square size={16} />
+                      Stop Scan
+                    </>
+                  ) : (
+                    <>
+                      <Play size={16} />
+                      Start Scan
+                    </>
+                  )}
+                </button>
+              </div>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -748,33 +771,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               </div>
             </div>
 
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={handleToggleScan}
-                className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
-                  !isRfidAvailable
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : isDeliveryActive
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-primary hover:bg-blue-700"
-                }`}
-                disabled={!isRfidAvailable}
-              >
-                {isDeliveryActive ? (
-                  <>
-                    <Square size={16} />
-                    Stop Scan
-                  </>
-                ) : (
-                  <>
-                    <Play size={16} />
-                    Start Scan
-                  </>
-                )}
-              </button>
-            </div>
-
             {/* Warning message for invalid customers */}
             {formData.customerId && getInvalidLinenCount() > 0 && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -806,7 +802,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                       No
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      EPC
+                      RFID
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
                       Customer Info

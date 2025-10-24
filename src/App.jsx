@@ -17,6 +17,7 @@ import FinalCheckPage from "./pages/FinalCheck";
 import { Toaster } from "react-hot-toast";
 import ScanningPage from "./pages/ScanningPage";
 import Scanning from "./pages/Scanning";
+import LinenPending from "./pages/LinenPending";
 
 const App = () => {
   const [activePage, setActivePage] = useState("login");
@@ -60,6 +61,8 @@ const App = () => {
         return <PrintTestPage />;
       case "rfid-test":
         return <RfidTestPage rfidHook={rfidHook} />;
+      case "linen-pending":
+        return <LinenPending rfidHook={rfidHook} />;
       default:
         return <LinenCleanPage rfidHook={rfidHook} />;
     }
