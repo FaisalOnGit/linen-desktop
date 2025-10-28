@@ -18,10 +18,64 @@ import { Toaster } from "react-hot-toast";
 import ScanningPage from "./pages/ScanningPage";
 import Scanning from "./pages/Scanning";
 import LinenPending from "./pages/LinenPending";
+import Cetak from "./pages/Cetak";
 
 const App = () => {
   const [activePage, setActivePage] = useState("login");
   const rfidHook = useRfid();
+
+  // Get default page based on user menus after login
+  const getDefaultPageFromMenus = (menus) => {
+    if (!menus || !Array.isArray(menus)) return "register";
+
+    // Define which menus are available in desktop app
+    const desktopAvailableMenus = [
+      "Register RFID",
+      "Grouping",
+      "Linen Delivery",
+      "Final Check",
+      "Linen Pending",
+      "Cetak",
+    ];
+
+    // Filter only active menus that are available in desktop app and sort by menuSort
+    const availableDesktopMenus = menus
+      .filter(
+        (menu) =>
+          menu.menuIsActive && desktopAvailableMenus.includes(menu.menuName)
+      )
+      .sort((a, b) => a.menuSort - b.menuSort);
+
+    console.log("All user menus:", menus);
+    console.log(
+      "Available desktop menus filtered and sorted:",
+      availableDesktopMenus
+    );
+
+    if (availableDesktopMenus.length === 0) {
+      console.log("No desktop menus found, returning register as fallback");
+      return "register";
+    }
+
+    const highestPriorityMenu = availableDesktopMenus[0];
+    console.log("Highest priority desktop menu:", highestPriorityMenu);
+
+    // Map menuName to pageId
+    const menuPageMap = {
+      "Register RFID": "register",
+      Grouping: "grouping",
+      "Linen Delivery": "delivery-new",
+      "Final Check": "final-check",
+      "Linen Pending": "linen-pending",
+      "Setting Reader": "reader",
+      Cetak: "cetak",
+    };
+
+    const pageId = menuPageMap[highestPriorityMenu.menuName];
+    console.log("Mapped to pageId:", pageId);
+
+    return pageId || "register";
+  };
 
   const handleNavigation = (page) => {
     setActivePage(page);
@@ -33,10 +87,32 @@ const App = () => {
     };
   }, [rfidHook.clearAllData]);
 
+  // Handle login success with menu-based navigation
+  const handleLoginSuccess = async () => {
+    try {
+      // Get user data including menus
+      const userData = await window.authAPI.getUserData();
+
+      if (userData && userData.menus) {
+        const defaultPage = getDefaultPageFromMenus(userData.menus);
+        console.log("Setting active page to:", defaultPage);
+        setActivePage(defaultPage);
+      } else {
+        // Fallback to grouping if no menus found
+        console.log("No menus found, fallback to grouping");
+        setActivePage("grouping");
+      }
+    } catch (error) {
+      console.error("Error getting user data after login:", error);
+      // Fallback to grouping
+      setActivePage("grouping");
+    }
+  };
+
   const renderActivePage = () => {
     switch (activePage) {
       case "login":
-        return <LoginPage onLoginSuccess={() => setActivePage("grouping")} />;
+        return <LoginPage onLoginSuccess={handleLoginSuccess} />;
       case "reader":
         return <SettingPage rfidHook={rfidHook} />;
       case "register":
@@ -63,8 +139,10 @@ const App = () => {
         return <RfidTestPage rfidHook={rfidHook} />;
       case "linen-pending":
         return <LinenPending rfidHook={rfidHook} />;
+      case "cetak":
+        return <Cetak />;
       default:
-        return <LinenCleanPage rfidHook={rfidHook} />;
+        return <RegisterPage rfidHook={rfidHook} />;
     }
   };
 

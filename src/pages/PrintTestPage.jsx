@@ -103,29 +103,34 @@ function PrintTestPage() {
 
     // Handle dynamic linen types
     let linenItems = "";
-    let startY = 325;
+    let startY = 360; // Adjusted start position after removing duplicate DO
     const lineHeight = 25;
+
+    // Add headers for QTY and Linen columns
+    linenItems += `^FO70,${startY}^A0N,22,22^FDQTY^FS\n`;
+    linenItems += `^FO150,${startY}^A0N,22,22^FDLinen^FS\n`;
+    startY += lineHeight;
 
     if (deliveryData.linenItems && Array.isArray(deliveryData.linenItems)) {
       deliveryData.linenItems.forEach((item, index) => {
         const yPos = startY + index * lineHeight;
 
-        // Display linen name and quantity vertically in single column
-        linenItems += `^FO70,${yPos}^A0N,22,22^FD* ${item.name}: ${
-          item.quantity || "-"
-        }^FS\n`;
+        // Display QTY in first column, linen name in second column
+        linenItems += `^FO70,${yPos}^A0N,22,22^FD${item.quantity}^FS\n`;
+        linenItems += `^FO150,${yPos}^A0N,22,22^FD${item.name || "-"}^FS\n`;
       });
     } else if (deliveryData.linenTypes) {
       // Fallback for single linen type
-      linenItems = `^FO70,${startY}^A0N,22,22^FDLinen: ${deliveryData.linenTypes}^FS\n`;
+      linenItems += `^FO70,${startY}^A0N,22,22^FD1^FS\n`;
+      linenItems += `^FO150,${startY}^A0N,22,22^FD${deliveryData.linenTypes}^FS\n`;
       startY += lineHeight;
     }
 
-    // Calculate total height based on linen items
+    // Calculate total height based on linen items plus headers
     const numberOfLinenItems = deliveryData.linenItems
       ? deliveryData.linenItems.length
       : 1;
-    const totalLinenHeight = numberOfLinenItems * lineHeight;
+    const totalLinenHeight = (numberOfLinenItems + 1) * lineHeight; // +1 for headers
     const finalY = startY + totalLinenHeight + 35;
     const labelHeight = Math.max(600, finalY + 50);
 
@@ -136,19 +141,21 @@ function PrintTestPage() {
 
 ^FO150,125^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
 
-^FO230,165^A0N,20,20^FD${currentDate}^FS
+^FO180,165^A0N,35,35^FD${deliveryData.doNumber || "DO251024000090"}^FS
 
-^FO70,190^A0N,25,25^FDDetail Pengiriman:^FS
-^FO70,225^GB480,0,2^FS
+^FO230,200^A0N,20,20^FD${currentDate}^FS
 
-^FO70,250^A0N,22,22^FDKlien: ${deliveryData.customer || "-"}^FS
+^FO70,225^A0N,25,25^FDDetail Pengiriman:^FS
+^FO70,260^GB480,0,2^FS
 
-^FO70,275^A0N,22,22^FDRuangan: ${deliveryData.room || "-"}^FS
+^FO70,285^A0N,22,22^FDKlien: ${deliveryData.customer || "-"}^FS
 
-^FO70,300^A0N,22,22^FDTotal Linen: ${deliveryData.totalLinen || "0"}^FS
+^FO70,310^A0N,22,22^FDRuangan: ${deliveryData.room || "-"}^FS
 
-^FO450,250^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}^FS
-^FO450,275^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
+^FO70,335^A0N,22,22^FDTotal Linen: ${deliveryData.totalLinen || "0"}^FS
+
+^FO450,285^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}^FS
+^FO450,310^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
 
 ${linenItems}
 
@@ -171,6 +178,7 @@ ${linenItems}
       customer: "RS PREMIER JATINEGARA",
       room: "RUANG RAWAT INAP LT 3",
       totalLinen: "45",
+      doNumber: "DO251024000090",
       // Dynamic linen items - will be displayed in columns
       linenItems: [
         { name: "Handuk Besar", quantity: "15" },
@@ -209,6 +217,7 @@ ${linenItems}
       customer: "RS PREMIER JATINEGARA",
       room: "RUANG RAWAT INAP LT 3",
       totalLinen: "45",
+      doNumber: "DO251024000090",
       // Dynamic linen items - will be displayed in columns
       linenItems: [
         { name: "Handuk Besar", quantity: "15" },
@@ -384,6 +393,7 @@ ${linenItems}
 
                   <div className="text-center mb-4">
                     <div className="text-2xl font-bold">Pengiriman Reguler</div>
+                    <div className="text-2xl font-bold">DO251024000090</div>
                     <div className="text-sm text-gray-600">
                       {new Date()
                         .toLocaleString("en-GB", {
@@ -416,22 +426,57 @@ ${linenItems}
                           <span className="w-20">Total Linen:</span>
                           <span>45</span>
                         </div>
-
                         <div className="mt-4">
                           <div className="font-semibold mb-2">
                             Rincian Linen:
                           </div>
-                          <div className="text-sm space-y-1">
-                            <div>* Handuk Besar: 15</div>
-                            <div>* Handuk Kecil: 8</div>
-                            <div>* Sprei Queen: 6</div>
-                            <div>* Sprei King: 4</div>
-                            <div>* Selimut Tebal: 5</div>
-                            <div>* Selimut Tipis: 3</div>
-                            <div>* Guling: 8</div>
-                            <div>* Bantal: 10</div>
-                            <div>* Sarung Bantal: 10</div>
-                            <div>* Keset Kamar: 4</div>
+                          <div className="text-sm">
+                            <div className="flex mb-1 font-semibold border-b border-gray-300 pb-1">
+                              <span className="w-12">QTY</span>
+                              <span className="flex-1">Linen</span>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex">
+                                <span className="w-12">15</span>
+                                <span className="flex-1">Handuk Besar</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">8</span>
+                                <span className="flex-1">Handuk Kecil</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">6</span>
+                                <span className="flex-1">Sprei Queen</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">4</span>
+                                <span className="flex-1">Sprei King</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">5</span>
+                                <span className="flex-1">Selimut Tebal</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">3</span>
+                                <span className="flex-1">Selimut Tipis</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">8</span>
+                                <span className="flex-1">Guling</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">10</span>
+                                <span className="flex-1">Bantal</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">10</span>
+                                <span className="flex-1">Sarung Bantal</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-12">4</span>
+                                <span className="flex-1">Keset Kamar</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

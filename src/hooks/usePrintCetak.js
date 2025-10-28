@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const usePrint = () => {
+const usePrintCetak = () => {
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [devices, setDevices] = useState([]);
   const [printStatus, setPrintStatus] = useState("Loading...");
@@ -104,66 +104,90 @@ const usePrint = () => {
       })
       .replace(",", "");
 
-    // Handle dynamic linen types
+    // Handle dynamic linen types grouped by room
     let linenItems = "";
-    let startY = 360; // Adjusted start position after removing duplicate DO
-    const lineHeight = 25;
+    let startY = 360; // Adjusted start position after adding detail pengiriman section
+    const lineHeight = 30; // Increased line height for better vertical spacing
 
-    // Add headers for QTY and Linen columns
-    linenItems += `^FO70,${startY}^A0N,22,22^FDQTY^FS\n`;
-    linenItems += `^FO150,${startY}^A0N,22,22^FDLinen^FS\n`;
-    startY += lineHeight;
-
+    // Group linen items by room
+    const roomsData = {};
     if (deliveryData.linenItems && Array.isArray(deliveryData.linenItems)) {
-      deliveryData.linenItems.forEach((item, index) => {
-        const yPos = startY + index * lineHeight;
-
-        // Display QTY in first column, linen name in second column
-        linenItems += `^FO70,${yPos}^A0N,22,22^FD${item.quantity}^FS\n`;
-        linenItems += `^FO150,${yPos}^A0N,22,22^FD${item.name || "-"}^FS\n`;
+      deliveryData.linenItems.forEach((item) => {
+        const room = item.room || "Umum";
+        if (!roomsData[room]) {
+          roomsData[room] = [];
+        }
+        roomsData[room].push(item);
       });
-    } else if (deliveryData.linenTypes) {
-      // Fallback for single linen type
-      linenItems += `^FO70,${startY}^A0N,22,22^FD1^FS\n`;
-      linenItems += `^FO150,${startY}^A0N,22,22^FD${deliveryData.linenTypes}^FS\n`;
-      startY += lineHeight;
     }
 
-    // Calculate total height based on linen items plus headers
-    const numberOfLinenItems = deliveryData.linenItems
-      ? deliveryData.linenItems.length
-      : 1;
-    const totalLinenHeight = (numberOfLinenItems + 1) * lineHeight; // +1 for headers
-    const finalY = startY + totalLinenHeight + 35;
-    const labelHeight = Math.max(600, finalY + 50);
+    let currentY = startY;
+
+    // Generate linen items for each room
+    Object.entries(roomsData).forEach(([roomName, roomItems], roomIndex) => {
+      if (roomIndex > 0) {
+        // Add spacing between rooms
+        currentY += lineHeight;
+      }
+
+      // Calculate total items for this room
+      const roomTotal = roomItems.reduce(
+        (sum, item) => sum + parseInt(item.quantity || 0),
+        0
+      );
+
+      // Add room header with total count
+      linenItems += `^FO70,${currentY}^A0N,25,25^FB480,1,0,B^FDRuangan: ${roomName}^FS\n`;
+      currentY += 30;
+      linenItems += `^FO70,${currentY}^A0N,25,25^FDTotal Linen: ${roomTotal}^FS\n`;
+      currentY += 30;
+
+      // Add headers for QTY and Linen columns for this room
+      linenItems += `^FO100,${currentY}^A0N,25,25^FDQTY^FS\n`;
+      linenItems += `^FO180,${currentY}^A0N,25,25^FDLinen^FS\n`;
+      currentY += lineHeight;
+
+      // Add items for this room
+      roomItems.forEach((item) => {
+        linenItems += `^FO100,${currentY}^A0N,25,25^FD${item.quantity}^FS\n`;
+        linenItems += `^FO180,${currentY}^A0N,25,25^FD${item.name || "-"}^FS\n`;
+        currentY += lineHeight;
+      });
+
+      // Add separator line after room items
+      linenItems += `^FO70,${currentY}^GB480,0,1^FS\n`;
+      currentY += 20;
+    });
+
+    // Calculate total height based on all grouped items
+    const totalLinenHeight = currentY - startY + lineHeight * 2;
+    const finalY = startY + totalLinenHeight + 40;
+    const labelHeight = Math.max(900, finalY + 250); // Increased minimum height and extra space for better spacing
 
     let zpl = `^XA
 ^LL${labelHeight}
 ^FO100,50^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
-^FO220,90^A0N,28,28^FD(Obsesiman)^FS
+^FO250,90^A0N,35,35^FD(OSLA)^FS
 
-^FO150,125^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
+^FO185,125^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
 
-^FO180,165^A0N,35,35^FD${deliveryData.deliveryNumber || "DO251024000090"}^FS
+^FO230,165^A0N,20,20^FD${currentDate}^FS
 
-^FO230,200^A0N,20,20^FD${currentDate}^FS
-
-^FO70,225^A0N,25,25^FDDetail Pengiriman:^FS
 ^FO70,260^GB480,0,2^FS
 
-^FO70,285^A0N,22,22^FDKlien: ${deliveryData.customer || "-"}^FS
+^FO70,285^A0N,23,23^FDKlien: ${deliveryData.customer || "-"}^FS
 
-^FO70,310^A0N,22,22^FDRuangan: ${deliveryData.room || "-"}^FS
+^FO400,285^A0N,23,23^FDTotal: ${deliveryData.totalLinen || "0"}^FS
 
-^FO70,335^A0N,22,22^FDTotal Linen: ${deliveryData.totalLinen || "0"}^FS
-
-^FO450,285^A0N,22,22^FD${deliveryData.driverLabel || "Operator"}^FS
-^FO450,310^A0N,22,22^FD${deliveryData.driverName || "-"}^FS
+^FO70,335^GB480,0,2^FS
 
 ${linenItems}
 
 ^FO70,${finalY}^GB480,0,2^FS
-^FO220,${finalY + 30}^A0N,20,20^FDTerima kasih^FS
+^FO110,${finalY + 30}^A0N,25,25^FDTTD OSLA^FS
+^FO380,${finalY + 30}^A0N,25,25^FDTTD PERAWAT^FS
+^FO70,${finalY + 140}^A0N,25,25^FD(                      )^FS
+^FO380,${finalY + 140}^A0N,25,25^FD(                      )^FS
 ^XZ`;
 
     return zpl;
@@ -245,4 +269,4 @@ ${linenItems}
   };
 };
 
-export default usePrint;
+export default usePrintCetak;

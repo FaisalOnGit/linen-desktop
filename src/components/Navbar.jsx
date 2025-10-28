@@ -15,11 +15,40 @@ import {
   Tags,
   PackageOpen,
   Clock,
+  FileOutput,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
+import { useEffect } from "react";
 
 const Navbar = ({ activePage, onNavigate, rfidHook }) => {
   const [activeTab, setActiveTab] = useState("Process");
+  const [userMenus, setUserMenus] = useState([]);
+
+  // Get user menus from authAPI on component mount
+  useEffect(() => {
+    const getUserMenus = async () => {
+      try {
+        const userData = await window.authAPI.getUserData();
+        if (userData && userData.menus) {
+          setUserMenus(userData.menus);
+          console.log("User menus loaded:", userData.menus);
+        }
+      } catch (error) {
+        console.error("Error loading user menus:", error);
+      }
+    };
+
+    getUserMenus();
+  }, []);
+
+  // Check if user has access to specific menu
+  const hasMenuAccess = (menuName) => {
+    return userMenus.some(
+      (menu) =>
+        menu.menuName &&
+        menu.menuName.toLowerCase().includes(menuName.toLowerCase())
+    );
+  };
 
   // Destructure RFID hook functions and state
   const {
@@ -72,111 +101,135 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
     {
       name: "Process",
       groups: [
-        {
-          title: "Register",
-          commands: [
-            {
-              id: "register",
-              label: "Register\nRFID",
-              icon: Tags,
-              size: "large",
-              description: "Register new RFID tags",
-            },
-          ],
-        },
-        // {
-        //   title: "Clean Process",
-        //   commands: [
-        //     {
-        //       id: "sorting",
-        //       label: "Linen\nBersih",
-        //       icon: CheckCircle,
-        //       size: "large",
-        //       description: "Process clean linen",
-        //     },
-        //   ],
-        // },
-        {
-          title: "Grouping",
-          commands: [
-            {
-              id: "grouping",
-              label: "Grouping\nLinen",
-              icon: PackageOpen,
-              size: "large",
-              description: "Group linen items",
-            },
-            // {
-            //   id: "scanning",
-            //   label: "Scanner",
-            //   icon: Search,
-            //   size: "large",
-            //   description: "Scan and validate RFID tags",
-            // },
-          ],
-        },
-        {
-          title: "Distribution",
-          commands: [
-            {
-              id: "delivery-new",
-              label: "Pengiriman\nBaru",
-              icon: Truck,
-              size: "large",
-              description: "New delivery shipments",
-            },
-            {
-              id: "delivery-regular",
-              label: "Pengiriman\nReguler",
-              icon: Package,
-              size: "large",
-              description: "Regular delivery shipments",
-            },
-            {
-              id: "delivery-rewash",
-              label: "Pengiriman\nRewash",
-              icon: RefreshCw,
-              size: "large",
-              description: "Rewash delivery shipments",
-            },
-            {
-              id: "delivery-retur",
-              label: "Pengiriman\nRetur",
-              icon: RotateCcw,
-              size: "large",
-              description: "Return delivery shipments",
-            },
-          ],
-        },
-        {
-          title: "Final Check",
-          commands: [
-            {
-              id: "final-check",
-              label: "Final\nCheck",
-              icon: Search,
-              size: "large",
-              description: "Final check linen validation",
-            },
-          ],
-        },
-        {
-          title: "Pending",
-          commands: [
-            {
-              id: "linen-pending",
-              label: "Linen\nPending",
-              icon: Clock,
-              size: "large",
-              description: "View pending linen items",
-            },
-          ],
-        },
+        // Register - Menu: Register RFID
+        ...(hasMenuAccess("Register RFID")
+          ? [
+              {
+                title: "Register",
+                commands: [
+                  {
+                    id: "register",
+                    label: "Register\nRFID",
+                    icon: Tags,
+                    size: "large",
+                    description: "Register new RFID tags",
+                  },
+                ],
+              },
+            ]
+          : []),
+        // Grouping - Menu: Grouping
+        ...(hasMenuAccess("Grouping")
+          ? [
+              {
+                title: "Grouping",
+                commands: [
+                  {
+                    id: "grouping",
+                    label: "Grouping\nLinen",
+                    icon: PackageOpen,
+                    size: "large",
+                    description: "Group linen items",
+                  },
+                ],
+              },
+            ]
+          : []),
+        // Distribution - Menu: Linen Delivery
+        ...(hasMenuAccess("Linen Delivery")
+          ? [
+              {
+                title: "Distribution",
+                commands: [
+                  {
+                    id: "delivery-new",
+                    label: "Pengiriman\nBaru",
+                    icon: Truck,
+                    size: "large",
+                    description: "New delivery shipments",
+                  },
+                  {
+                    id: "delivery-regular",
+                    label: "Pengiriman\nReguler",
+                    icon: Package,
+                    size: "large",
+                    description: "Regular delivery shipments",
+                  },
+                  {
+                    id: "delivery-rewash",
+                    label: "Pengiriman\nRewash",
+                    icon: RefreshCw,
+                    size: "large",
+                    description: "Rewash delivery shipments",
+                  },
+                  {
+                    id: "delivery-retur",
+                    label: "Pengiriman\nRetur",
+                    icon: RotateCcw,
+                    size: "large",
+                    description: "Return delivery shipments",
+                  },
+                ],
+              },
+            ]
+          : []),
+        // Final Check - Menu: Final Check
+        ...(hasMenuAccess("Final Check")
+          ? [
+              {
+                title: "Final Check",
+                commands: [
+                  {
+                    id: "final-check",
+                    label: "Final\nCheck",
+                    icon: Search,
+                    size: "large",
+                    description: "Final check linen validation",
+                  },
+                ],
+              },
+            ]
+          : []),
+        // Pending - Menu: Linen Pending
+        ...(hasMenuAccess("Linen Pending")
+          ? [
+              {
+                title: "Pending",
+                commands: [
+                  {
+                    id: "linen-pending",
+                    label: "Linen\nPending",
+                    icon: Clock,
+                    size: "large",
+                    description: "View pending linen items",
+                  },
+                ],
+              },
+            ]
+          : []),
+        // Cetak - Menu: Cetak
+        ...(hasMenuAccess("Cetak")
+          ? [
+              {
+                title: "Print",
+                commands: [
+                  {
+                    id: "cetak",
+                    label: "Cetak\nLaporan",
+                    icon: FileOutput,
+                    size: "large",
+                    description: "Print linen reports",
+                  },
+                ],
+              },
+            ]
+          : []),
       ],
     },
     {
       name: "Settings",
       groups: [
+        // Device - Always show Settings
         {
           title: "Device",
           commands: [
@@ -187,20 +240,6 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
               size: "large",
               description: "Configure RFID reader",
             },
-            // {
-            //   id: "rfid-test",
-            //   label: "RFID\nTest",
-            //   icon: TestTube,
-            //   size: "large",
-            //   description: "Test all RFID functions",
-            // },
-            // {
-            //   id: "print-test",
-            //   label: "Print\nTest",
-            //   icon: Printer,
-            //   size: "large",
-            //   description: "Test label printing",
-            // },
           ],
         },
       ],

@@ -69,6 +69,11 @@ contextBridge.exposeInMainWorld("authAPI", {
     return Promise.resolve(globalUserData);
   },
 
+  // Get user data with menus
+  getUserData: async () => {
+    return Promise.resolve(globalUserData);
+  },
+
   // Get user first name
   getFirstName: async () => {
     return Promise.resolve(globalUserData?.firstName || null);

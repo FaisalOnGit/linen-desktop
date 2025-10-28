@@ -225,12 +225,12 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       console.log("🗑️ Clearing all EPC data...");
       clearAllEPCs();
 
-      // Reset form data completely (like tab switching) - keep customer, driver, plate
+      // Reset form data completely (like tab switching) - keep customer, driver, plate, room
       console.log("🔄 Resetting form data completely...");
       setFormData((prev) => ({
         ...prev,
         qty: 0,
-        roomId: "", // Reset room selection
+        // roomId: "", // Keep room selection - do not reset
       }));
 
       // Reset delivery submission state
