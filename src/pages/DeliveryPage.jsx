@@ -7,6 +7,67 @@ import { useCustomers } from "../hooks/useCustomers";
 import { useRooms } from "../hooks/useRooms";
 import usePrint from "../hooks/usePrint";
 
+// Custom hook for dateShift management
+const useDateShift = (initialShift) => {
+  const [dateShift, setDateShift] = useState("");
+  const [dateShiftWithTime, setDateShiftWithTime] = useState("");
+
+  const getDateForShift = (shift) => {
+    const today = new Date();
+
+    switch (shift) {
+      case "1":
+        today.setHours(13, 0, 0, 0); // Set to 13:00:00 local time
+        break;
+      case "2":
+        today.setHours(16, 0, 0, 0); // Set to 16:00:00 local time
+        break;
+      case "3":
+        today.setHours(19, 0, 0, 0); // Set to 19:00:00 local time
+        break;
+      default:
+        today.setHours(0, 0, 0, 0); // Default to midnight
+        break;
+    }
+
+    return today;
+  };
+
+  const formatDateTime = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  };
+
+  const updateDateShift = (shift) => {
+    if (shift) {
+      const newDate = getDateForShift(shift);
+      const dateOnly = newDate.toISOString().split("T")[0]; // YYYY-MM-DD for display
+      const dateWithTime = formatDateTime(newDate); // Local time format (YYYY-MM-DDTHH:mm:ss)
+
+      setDateShift(dateOnly);
+      setDateShiftWithTime(dateWithTime);
+    } else {
+      setDateShift("");
+      setDateShiftWithTime("");
+    }
+  };
+
+  // Initialize dateShift when component mounts or shift changes
+  useEffect(() => {
+    if (initialShift) {
+      updateDateShift(initialShift);
+    }
+  }, [initialShift]);
+
+  return { dateShift, dateShiftWithTime, updateDateShift };
+};
+
 const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const {
     deliveryTags = [],
@@ -46,6 +107,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
+  // Use custom dateShift hook
+  const { dateShift, dateShiftWithTime, updateDateShift } = useDateShift(
+    formData.shift
+  );
+
   // Update current time every second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -72,25 +138,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         };
 
         getUserFullName().then((fullName) => {
-          const today = new Date();
-          const formattedDate = today.toISOString().split("T")[0];
-
-          // Validate saved dateShift
-          let validDateShift = formattedDate;
-          if (savedData.dateShift) {
-            try {
-              const parsedDate = new Date(savedData.dateShift);
-              if (
-                !isNaN(parsedDate.getTime()) &&
-                savedData.dateShift.match(/^\d{4}-\d{2}-\d{2}$/)
-              ) {
-                validDateShift = savedData.dateShift;
-              }
-            } catch (dateError) {
-              // Use current date if invalid
-            }
-          }
-
           setFormData({
             customerId: "",
             customerName: "",
@@ -99,12 +146,10 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
             plateNumber: "-",
             roomId: "",
             shift: savedData.shift || "",
-            dateShift: validDateShift,
+            dateShift: "", // Will be set by custom hook
           });
         });
       } catch (error) {
-        const today = new Date();
-        const formattedDate = today.toISOString().split("T")[0];
         setFormData({
           customerId: "",
           customerName: "",
@@ -113,13 +158,23 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           plateNumber: "-",
           roomId: "",
           shift: "",
-          dateShift: formattedDate,
+          dateShift: "", // Will be set by custom hook
         });
       }
     };
 
     loadPersistentData();
   }, []);
+
+  // Update form data with custom hook dateShift
+  useEffect(() => {
+    if (dateShift && formData.dateShift !== dateShift) {
+      setFormData((prev) => ({
+        ...prev,
+        dateShift: dateShift,
+      }));
+    }
+  }, [dateShift, formData.dateShift]);
 
   // Save persistent data to localStorage
   const saveToLocalStorage = () => {
@@ -223,24 +278,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       };
 
       getCurrentDriverName().then((driverName) => {
-        const today = new Date();
-        const formattedDate = today.toISOString().split("T")[0];
-        let validDateShift = formattedDate;
-
-        if (savedData.dateShift) {
-          try {
-            const parsedDate = new Date(savedData.dateShift);
-            if (
-              !isNaN(parsedDate.getTime()) &&
-              savedData.dateShift.match(/^\d{4}-\d{2}-\d{2}$/)
-            ) {
-              validDateShift = savedData.dateShift;
-            }
-          } catch (dateError) {
-            // Use current date if invalid
-          }
-        }
-
         setFormData({
           customerId: "",
           customerName: "",
@@ -249,12 +286,10 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           driverName: savedData.driverName || driverName,
           plateNumber: "-",
           shift: savedData.shift || "",
-          dateShift: validDateShift,
+          dateShift: "", // Will be set by custom hook
         });
       });
     } catch (error) {
-      const today = new Date();
-      const formattedDate = today.toISOString().split("T")[0];
       setFormData((prev) => ({
         ...prev,
         customerId: "",
@@ -262,7 +297,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         qty: 0,
         roomId: "",
         shift: "",
-        dateShift: formattedDate,
+        dateShift: "", // Will be set by custom hook
       }));
     }
 
@@ -281,7 +316,13 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     const processedValue = name === "plateNumber" ? value.toUpperCase() : value;
+
     setFormData({ ...formData, [name]: processedValue });
+
+    // Update dateShift using custom hook when shift changes
+    if (name === "shift") {
+      updateDateShift(value);
+    }
 
     // Save to localStorage when shift or dateShift is manually changed
     if (name === "shift" || name === "dateShift") {
@@ -440,7 +481,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         driverName: formData.driverName,
         plateNumber: formData.plateNumber,
         shift: formData.shift,
-        dateShift: formData.dateShift,
+        dateShift: dateShiftWithTime || formData.dateShift, // Use ISO format with time
         linens: validLinens.map((linen) => ({
           epc: linen.epc,
           status_id: linen.statusId || 1,
