@@ -84,6 +84,8 @@ const App = () => {
   useEffect(() => {
     return () => {
       rfidHook.clearAllData();
+      // Clear delivery persistent data when app closes
+      localStorage.removeItem('deliveryPersistentData');
     };
   }, [rfidHook.clearAllData]);
 
@@ -160,7 +162,9 @@ const App = () => {
         {activePage === "login" ? (
           renderActivePage()
         ) : (
-          <div className="w-full mx-auto px-4 py-6">{renderActivePage()}</div>
+          <div className="w-full mx-auto h-full px-4 py-2">
+            {renderActivePage()}
+          </div>
         )}
 
         {/* Toast Notification Container */}

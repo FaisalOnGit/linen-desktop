@@ -26,41 +26,120 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
   const currentDeliveryType = deliveryTypes[deliveryType] || deliveryTypes[1];
 
+  // Form state
   const [formData, setFormData] = useState({
     customerId: "",
     customerName: "",
     qty: 0,
     driverName: "",
-    plateNumber: "-", // Hardcoded value
+    plateNumber: "-",
     roomId: "",
+    shift: "",
+    dateShift: "",
   });
 
+  // UI state
   const [deliverySubmitted, setDeliverySubmitted] = useState(false);
   const [lastDeliveryData, setLastDeliveryData] = useState(null);
   const [submitDisabled, setSubmitDisabled] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
-  // Get user full name for driver
+  // Update current time every second
   useEffect(() => {
-    const getUserFullName = async () => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load persistent data from localStorage on mount
+  useEffect(() => {
+    const loadPersistentData = () => {
       try {
-        const fullName = await window.authAPI.getFullName();
-        if (fullName) {
-          setFormData((prev) => ({
-            ...prev,
-            driverName: fullName,
-          }));
-        }
+        const persistentData = localStorage.getItem("deliveryPersistentData");
+        const savedData = persistentData ? JSON.parse(persistentData) : {};
+
+        const getUserFullName = async () => {
+          try {
+            const fullName = await window.authAPI.getFullName();
+            return fullName || "";
+          } catch (error) {
+            return "";
+          }
+        };
+
+        getUserFullName().then((fullName) => {
+          const today = new Date();
+          const formattedDate = today.toISOString().split("T")[0];
+
+          // Validate saved dateShift
+          let validDateShift = formattedDate;
+          if (savedData.dateShift) {
+            try {
+              const parsedDate = new Date(savedData.dateShift);
+              if (
+                !isNaN(parsedDate.getTime()) &&
+                savedData.dateShift.match(/^\d{4}-\d{2}-\d{2}$/)
+              ) {
+                validDateShift = savedData.dateShift;
+              }
+            } catch (dateError) {
+              // Use current date if invalid
+            }
+          }
+
+          setFormData({
+            customerId: "",
+            customerName: "",
+            qty: 0,
+            driverName: savedData.driverName || fullName,
+            plateNumber: "-",
+            roomId: "",
+            shift: savedData.shift || "",
+            dateShift: validDateShift,
+          });
+        });
       } catch (error) {
-        console.error("Error getting user full name:", error);
+        const today = new Date();
+        const formattedDate = today.toISOString().split("T")[0];
+        setFormData({
+          customerId: "",
+          customerName: "",
+          qty: 0,
+          driverName: "",
+          plateNumber: "-",
+          roomId: "",
+          shift: "",
+          dateShift: formattedDate,
+        });
       }
     };
 
-    getUserFullName();
-  }, []); // Empty dependency array - only run once on mount
+    loadPersistentData();
+  }, []);
 
-  // Use custom hooks for data management
+  // Save persistent data to localStorage
+  const saveToLocalStorage = () => {
+    const persistentFields = {
+      shift: formData.shift,
+      dateShift: formData.dateShift,
+      driverName: formData.driverName,
+    };
+
+    try {
+      localStorage.setItem(
+        "deliveryPersistentData",
+        JSON.stringify(persistentFields)
+      );
+    } catch (error) {
+      // Silent error handling
+    }
+  };
+
+  // Custom hooks
   const { customers, loadingCustomers, fetchCustomers, getCustomerById } =
     useCustomers(baseUrl);
 
@@ -75,23 +154,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     updateLinenField,
   } = useLinenData(baseUrl, formData.customerId, formData.roomId);
 
-  // Effect to reinitialize useLinenData when customerId or roomId changes
-  useEffect(() => {
-    if (formData.customerId) {
-      revalidateLinens(formData.customerId, formData.roomId);
-    }
-  }, [formData.customerId, formData.roomId, revalidateLinens]);
-
   const { rooms, loadingRooms, fetchRooms, getRoomById } = useRooms(baseUrl);
 
-  // Effect untuk fetch rooms ketika customerId berubah
-  useEffect(() => {
-    if (formData.customerId) {
-      fetchRooms(formData.customerId);
-    }
-  }, [formData.customerId, fetchRooms]);
-
-  // Print functionality
   const {
     selectedDevice,
     devices,
@@ -103,27 +167,30 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     checkBrowserPrint,
   } = usePrint();
 
-  // Handle RFID tag scanning
+  // Effects
   useEffect(() => {
-    // Skip if RFID is not active
+    if (formData.customerId) {
+      revalidateLinens(formData.customerId, formData.roomId);
+    }
+  }, [formData.customerId, formData.roomId, revalidateLinens]);
+
+  useEffect(() => {
+    if (formData.customerId) {
+      fetchRooms(formData.customerId);
+    }
+  }, [formData.customerId, fetchRooms]);
+
+  useEffect(() => {
     if (!isDeliveryActive) return;
 
     if (deliveryTags && deliveryTags.length > 0) {
-      console.log(
-        `📡 DeliveryPage: Processing ${deliveryTags.length} tags from RFID`
-      );
-
       try {
-        // Process each tag using processScannedEPC
-        // Let the hook handle duplicate detection internally
-        deliveryTags.forEach((tag, index) => {
+        deliveryTags.forEach((tag) => {
           if (tag && tag.EPC) {
-            console.log(`🔍 Processing EPC ${tag.EPC} (index ${index})`);
             processScannedEPC(tag.EPC, formData.customerId, formData.roomId);
           }
         });
       } catch (error) {
-        console.error("❌ Error processing RFID tags:", error);
         toast.error("Gagal memproses tag RFID!", {
           duration: 3000,
           icon: "❌",
@@ -132,7 +199,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   }, [deliveryTags, isDeliveryActive, processScannedEPC, formData.customerId]);
 
-  // Update linen count when linens change
   useEffect(() => {
     const validLinens = linens.filter((linen) => linen.epc?.trim());
     setFormData((prev) => ({
@@ -141,42 +207,71 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }));
   }, [linens]);
 
-  // Clear all state when delivery type changes
   useEffect(() => {
-    console.log("🔄 Delivery type changed, clearing all state");
+    // Load persistent data and reset form data when delivery type changes
+    try {
+      const persistentData = localStorage.getItem("deliveryPersistentData");
+      const savedData = persistentData ? JSON.parse(persistentData) : {};
+
+      const getCurrentDriverName = async () => {
+        try {
+          const fullName = await window.authAPI.getFullName();
+          return fullName || "";
+        } catch (error) {
+          return "";
+        }
+      };
+
+      getCurrentDriverName().then((driverName) => {
+        const today = new Date();
+        const formattedDate = today.toISOString().split("T")[0];
+        let validDateShift = formattedDate;
+
+        if (savedData.dateShift) {
+          try {
+            const parsedDate = new Date(savedData.dateShift);
+            if (
+              !isNaN(parsedDate.getTime()) &&
+              savedData.dateShift.match(/^\d{4}-\d{2}-\d{2}$/)
+            ) {
+              validDateShift = savedData.dateShift;
+            }
+          } catch (dateError) {
+            // Use current date if invalid
+          }
+        }
+
+        setFormData({
+          customerId: "",
+          customerName: "",
+          qty: 0,
+          roomId: "",
+          driverName: savedData.driverName || driverName,
+          plateNumber: "-",
+          shift: savedData.shift || "",
+          dateShift: validDateShift,
+        });
+      });
+    } catch (error) {
+      const today = new Date();
+      const formattedDate = today.toISOString().split("T")[0];
+      setFormData((prev) => ({
+        ...prev,
+        customerId: "",
+        customerName: "",
+        qty: 0,
+        roomId: "",
+        shift: "",
+        dateShift: formattedDate,
+      }));
+    }
 
     // Stop RFID scanning if active
     if (isDeliveryActive) {
       stopDelivery();
     }
 
-    // Clear all EPC data
     clearAllEPCs();
-
-    // Get current driver name before resetting form
-    const getCurrentDriverName = async () => {
-      try {
-        const fullName = await window.authAPI.getFullName();
-        return fullName || "";
-      } catch (error) {
-        console.error("Error getting user full name:", error);
-        return "";
-      }
-    };
-
-    // Reset form data but keep driver name
-    getCurrentDriverName().then((driverName) => {
-      setFormData({
-        customerId: "",
-        customerName: "",
-        qty: 0,
-        driverName: driverName, // Keep current driver name
-        plateNumber: "-", // Keep hardcoded value
-        roomId: "", // Reset room selection
-      });
-    });
-
-    // Reset delivery submission state
     setDeliverySubmitted(false);
     setLastDeliveryData(null);
     setSubmitDisabled(false);
@@ -185,9 +280,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Convert plate number to uppercase
     const processedValue = name === "plateNumber" ? value.toUpperCase() : value;
     setFormData({ ...formData, [name]: processedValue });
+
+    // Save to localStorage when shift or dateShift is manually changed
+    if (name === "shift" || name === "dateShift") {
+      setTimeout(() => {
+        saveToLocalStorage();
+      }, 100);
+    }
   };
 
   const handleCustomerChange = (selected) => {
@@ -195,81 +296,57 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       ...formData,
       customerId: selected?.customerId || "",
       customerName: selected?.customerName || "",
-      roomId: "", // Reset room when customer changes
+      roomId: "",
     };
     setFormData(newFormData);
-
-    // Re-validate all existing linens when customer changes
     revalidateLinens(selected?.customerId || "", formData.roomId);
   };
 
   const handleClearAll = () => {
-    console.log(
-      "🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()"
-    );
-
     try {
-      // Stop RFID scanning first to prevent immediate re-population
       if (isDeliveryActive) {
-        console.log("🛑 Stopping RFID scan to prevent re-population");
         stopDelivery();
       }
 
-      // Use rfidHook.clearAllData() like tab switching for complete state reset
-      console.log("🗑️ Clearing all RFID data using rfidHook.clearAllData()...");
       if (rfidHook && rfidHook.clearAllData) {
         rfidHook.clearAllData();
       }
 
-      // Clear all EPC data using the hook
-      console.log("🗑️ Clearing all EPC data...");
       clearAllEPCs();
 
-      // Reset form data completely (like tab switching) - keep customer, driver, plate, room
-      console.log("🔄 Resetting form data completely...");
       setFormData((prev) => ({
         ...prev,
         qty: 0,
-        // roomId: "", // Keep room selection - do not reset
+        shift: prev.shift,
+        dateShift: prev.dateShift,
+        driverName: prev.driverName,
+        plateNumber: prev.plateNumber,
       }));
 
-      // Reset delivery submission state
       setDeliverySubmitted(false);
       setLastDeliveryData(null);
       setSubmitDisabled(false);
 
-      // Force multiple state updates to ensure complete clearing
       setTimeout(() => {
-        console.log("🔄 Double-checking and clearing any remaining state...");
-        clearAllEPCs(); // Call again to be sure
-
-        // Double-check rfidHook data clearing
+        clearAllEPCs();
         if (rfidHook && rfidHook.clearAllData) {
           rfidHook.clearAllData();
         }
-
-        // Reset delivery submission state again
         setDeliverySubmitted(false);
         setLastDeliveryData(null);
         setSubmitDisabled(false);
       }, 50);
 
       setTimeout(() => {
-        console.log("🔄 Final state cleanup...");
         clearAllEPCs();
-
-        // Final rfidHook data clearing
         if (rfidHook && rfidHook.clearAllData) {
           rfidHook.clearAllData();
         }
-
-        // Final delivery submission state reset
         setDeliverySubmitted(false);
         setLastDeliveryData(null);
         setSubmitDisabled(false);
       }, 200);
     } catch (error) {
-      console.error("❌ Error clearing all data:", error);
       toast.error("Gagal membersihkan data!", {
         duration: 3000,
         icon: "❌",
@@ -277,10 +354,10 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   };
 
-  // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validation
     if (!formData.customerId) {
       toast.error("Pilih customer terlebih dahulu!", {
         duration: 3000,
@@ -297,9 +374,22 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       return;
     }
 
-    // Plate number validation removed (hardcoded value)
+    if (!formData.shift) {
+      toast.error("Pilih shift terlebih dahulu!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
 
-    // Check for invalid customer tags
+    if (!formData.dateShift) {
+      toast.error("Tanggal tidak boleh kosong!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+
     const invalidLinenCount = getInvalidLinenCount();
     if (invalidLinenCount > 0) {
       toast.error(
@@ -312,7 +402,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       return;
     }
 
-    // Check for invalid room tags
     const invalidRoomLinenCount = getInvalidRoomLinenCount();
     if (invalidRoomLinenCount > 0) {
       toast.error(
@@ -326,10 +415,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
 
     try {
-      // Get authentication token
       const token = await window.authAPI.getToken();
 
-      // Filter valid linens
       const validLinens = linens.filter(
         (linen) =>
           linen.epc?.trim() &&
@@ -347,20 +434,19 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
       // Create payload
       const payload = {
-        deliveryTypeId: deliveryType, // <-- Hardcode deliveryTypeId based on menu (1=Baru, 2=Reguler, 3=Rewash, 4=Retur)
+        deliveryTypeId: deliveryType,
         customerId: formData.customerId,
         qty: validLinens.length,
         driverName: formData.driverName,
         plateNumber: formData.plateNumber,
+        shift: formData.shift,
+        dateShift: formData.dateShift,
         linens: validLinens.map((linen) => ({
           epc: linen.epc,
           status_id: linen.statusId || 1,
         })),
       };
 
-      console.log("Payload dikirim:", payload);
-
-      // Send POST request
       const response = await fetch(`${baseUrl}/Process/delivery`, {
         method: "POST",
         headers: {
@@ -371,7 +457,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       });
 
       const result = await response.json();
-      console.log("Response dari API:", result);
 
       if (!response.ok) {
         const errorMessage =
@@ -380,16 +465,13 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       }
 
       const successMessage = result.message || "Proses delivery berhasil!";
-
-      // Extract delivery number from API response
       const deliveryNumber = result.data?.deliveryNumber || "";
 
-      // Get linen types and create linen items for dynamic display
+      // Get linen types for printing
       let linenTypes = "Berbagai Jenis";
       let linenItems = [];
 
       try {
-        // Group linens by type and count quantities
         const linenCounts = {};
         validLinens.forEach((linen) => {
           const linenName = linen.linenName || linen.linenTypeName || "Unknown";
@@ -398,25 +480,19 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           }
         });
 
-        // Create linen items array
         linenItems = Object.entries(linenCounts).map(([name, quantity]) => ({
           name: name,
           quantity: quantity.toString(),
         }));
 
-        // Fallback to linenTypes string if needed
         const uniqueLinenNames = Object.keys(linenCounts);
         if (uniqueLinenNames.length > 0) {
           linenTypes = uniqueLinenNames.join(", ");
         }
-
-        console.log("📋 Extracted linen items for printing:", linenItems);
       } catch (error) {
-        console.error("Error extracting linen items:", error);
         // Keep default values if extraction fails
       }
 
-      // Store delivery data for printing with dynamic linen items
       const deliveryData = {
         deliveryNumber: deliveryNumber,
         customer: formData.customerName,
@@ -427,10 +503,9 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         driverLabel: "Operator",
         driverName: formData.driverName,
         linenTypes: linenTypes,
-        linenItems: linenItems, // Add dynamic linen items array
+        linenItems: linenItems,
       };
 
-      // Set the state first
       setLastDeliveryData(deliveryData);
       setDeliverySubmitted(true);
       setSubmitDisabled(true);
@@ -440,38 +515,20 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         icon: "✅",
       });
 
-      // Auto-print immediately after successful delivery with direct data
+      // Auto-print after successful delivery
       setTimeout(async () => {
         if (deliveryData) {
-          console.log("🖨️ Auto-printing after successful delivery...");
           try {
             await handlePrint(deliveryData);
           } catch (printError) {
-            console.error("❌ Auto-print error:", printError);
             toast.error("Gagal print otomatis, silakan print manual!", {
               duration: 3000,
               icon: "⚠️",
             });
           }
-        } else {
-          console.error("❌ Delivery data not available for printing");
         }
-      }, 200); // Reduced delay since we're passing data directly
-
-      // Commented out automatic state clear after successful delivery
-      // Keep state so user can print again with same data
-      // setTimeout(() => {
-      //   console.log("🗑️ Clearing all RFID data after successful delivery...");
-      //   if (rfidHook && rfidHook.clearAllData) {
-      //     rfidHook.clearAllData();
-      //   }
-      //   // Stop scanning if active
-      //   if (isDeliveryActive) {
-      //     stopDelivery();
-      //   }
-      // }, 500);
+      }, 200);
     } catch (error) {
-      console.error("Error submit:", error);
       const errorMessage = error.message || "Gagal proses delivery, coba lagi!";
       toast.error(errorMessage, {
         duration: 4000,
@@ -480,7 +537,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   };
 
-  // RFID scan toggle handler
   const handleToggleScan = () => {
     if (!isRfidAvailable) {
       toast.error("Device belum terkoneksi!", {
@@ -492,14 +548,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
     try {
       if (isDeliveryActive) {
-        console.log("🛑 Stopping RFID scan");
         stopDelivery();
       } else {
-        console.log("▶️ Starting RFID scan");
         startDelivery();
       }
     } catch (error) {
-      console.error("❌ Error toggling RFID scan:", error);
       toast.error("Gagal mengontrol scan RFID!", {
         duration: 3000,
         icon: "❌",
@@ -507,19 +560,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   };
 
-  // Print handler
   const handlePrint = async (deliveryDataToPrint = null) => {
     try {
-      // Use provided data or fall back to state
       const dataToPrint = deliveryDataToPrint || lastDeliveryData;
-
       await printDeliveryLabel(dataToPrint);
       toast.success("Print berhasil!", {
         duration: 3000,
         icon: "✅",
       });
     } catch (error) {
-      console.error("Print error:", error);
       toast.error("Gagal print, coba lagi!", {
         duration: 4000,
         icon: "❌",
@@ -527,22 +576,16 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   };
 
-  // Enhanced print handler for manual printing after successful delivery
   const handlePrintDirect = async (deliveryData) => {
-    if (!deliveryData) {
-      console.error("❌ No delivery data provided for direct printing");
-      return;
-    }
+    if (!deliveryData) return;
 
     try {
       await printDeliveryLabel(deliveryData);
-      console.log("🖨️ Direct print successful!");
       toast.success("Print ulang berhasil!", {
         duration: 3000,
         icon: "✅",
       });
     } catch (error) {
-      console.error("❌ Direct print error:", error);
       toast.error("Gagal print ulang, coba lagi!", {
         duration: 3000,
         icon: "❌",
@@ -550,7 +593,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }
   };
 
-  // Utility functions for styling
+  // Utility functions
   const getStatusColor = (status) => {
     if (!status) return "bg-gray-50 border-gray-300 text-gray-700";
 
@@ -560,7 +603,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       case "kotor":
         return "bg-yellow-50 border-yellow-300 text-yellow-700";
       case "rusak":
-        return "bg-red-50 border-red-300 text-red-700";
       case "hilang":
         return "bg-red-50 border-red-300 text-red-700";
       case "siap kirim":
@@ -582,53 +624,56 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
   return (
     <div className="font-poppins">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="bg-white rounded-lg shadow-lg px-6 pt-2 pb-4">
         <div className="space-y-6">
-          {/* Header with Delivery Type */}
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-800">
+          {/* Header */}
+          <div className="text-start">
+            <h1 className="text-xl font-bold text-gray-800">
               {currentDeliveryType.title}
             </h1>
           </div>
-          {/* Customer, Driver and Room Info */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="relative">
+
+          {/* Shift, Tanggal, Nama Customer Service, dan Tombol Set */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pilih Customer <span className="text-red-500">*</span>
+                Shift <span className="text-red-500">*</span>
               </label>
-              <Select
-                value={
-                  formData.customerId
-                    ? getCustomerById(formData.customerId)
-                    : null
-                }
-                onChange={handleCustomerChange}
-                options={customers}
-                getOptionLabel={(customer) =>
-                  `${customer.customerName} (${customer.customerCity})`
-                }
-                getOptionValue={(customer) => customer.customerId}
-                placeholder="Cari customer..."
-                isClearable
-                isSearchable
-                isLoading={loadingCustomers}
-                noOptionsMessage={() => "Customer tidak ditemukan"}
-                className="w-full"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (baseStyles, state) => ({
-                    ...baseStyles,
-                    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
-                    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
-                    fontSize: "14px",
-                    minHeight: "38px",
-                  }),
-                  option: (baseStyles) => ({
-                    ...baseStyles,
-                    fontSize: "14px",
-                  }),
-                }}
-              />
+              <select
+                name="shift"
+                value={formData.shift}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="">Pilih Shift</option>
+                <option value="1">Shift 1</option>
+                <option value="2">Shift 2</option>
+                <option value="3">Shift 3</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tanggal <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  name="dateShift"
+                  value={formData.dateShift}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-600 font-medium bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
+                  {currentTime.toLocaleTimeString("id-ID", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </div>
+              </div>
             </div>
 
             <div>
@@ -648,6 +693,86 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                &nbsp;
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setTimeout(() => {
+                    saveToLocalStorage();
+                  }, 100);
+
+                  const message = formData.shift
+                    ? `Shift ${formData.shift} berhasil disimpan!`
+                    : "Pilih shift terlebih dahulu!";
+                  toast.success(message, {
+                    duration: 2000,
+                    icon: "✅",
+                  });
+                }}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                title="Simpan shift yang dipilih ke localStorage"
+              >
+                Set
+              </button>
+            </div>
+          </div>
+
+          {/* Customer dan Room */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pilih Customer <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={
+                  formData.customerId
+                    ? getCustomerById(formData.customerId)
+                    : null
+                }
+                onChange={handleCustomerChange}
+                options={customers}
+                getOptionLabel={(customer) =>
+                  `${customer.customerName} (${customer.customerCity})`
+                }
+                getOptionValue={(customer) => customer.customerId}
+                placeholder={
+                  formData.shift
+                    ? "Cari customer..."
+                    : "Pilih shift terlebih dahulu"
+                }
+                isClearable
+                isSearchable
+                isLoading={loadingCustomers}
+                noOptionsMessage={() => "Customer tidak ditemukan"}
+                isDisabled={!formData.shift}
+                className="w-full"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (baseStyles, state) => ({
+                    ...baseStyles,
+                    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+                    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
+                    fontSize: "14px",
+                    minHeight: "38px",
+                    backgroundColor: !formData.shift ? "#f9fafb" : "white",
+                    cursor: !formData.shift ? "not-allowed" : "default",
+                  }),
+                  option: (baseStyles) => ({
+                    ...baseStyles,
+                    fontSize: "14px",
+                  }),
+                }}
+              />
+              {!formData.shift && (
+                <p className="text-xs text-orange-600 mt-1">
+                  ⚠️ Pilih shift terlebih dahulu
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Room
               </label>
               <Select
@@ -661,11 +786,16 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 options={rooms}
                 getOptionLabel={(room) => `${room.roomName} (${room.roomId})`}
                 getOptionValue={(room) => room.roomId}
-                placeholder="Pilih room..."
+                placeholder={
+                  formData.shift
+                    ? "Pilih room..."
+                    : "Pilih shift terlebih dahulu"
+                }
                 isClearable
                 isSearchable
                 isLoading={loadingRooms}
                 noOptionsMessage={() => "Room tidak ditemukan"}
+                isDisabled={!formData.shift}
                 className="w-full"
                 classNamePrefix="react-select"
                 styles={{
@@ -675,6 +805,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                     boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
                     fontSize: "14px",
                     minHeight: "38px",
+                    backgroundColor: !formData.shift ? "#f9fafb" : "white",
+                    cursor: !formData.shift ? "not-allowed" : "default",
                   }),
                   option: (baseStyles) => ({
                     ...baseStyles,
@@ -682,6 +814,11 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   }),
                 }}
               />
+              {!formData.shift && (
+                <p className="text-xs text-orange-600 mt-1">
+                  ⚠️ Pilih shift terlebih dahulu
+                </p>
+              )}
             </div>
           </div>
 
@@ -714,6 +851,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   )}
                 </button>
               </div>
+
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -771,7 +909,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               </div>
             </div>
 
-            {/* Warning message for invalid customers */}
+            {/* Warning messages */}
             {formData.customerId && getInvalidLinenCount() > 0 && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-700">
@@ -781,7 +919,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               </div>
             )}
 
-            {/* Warning message for invalid rooms */}
             {formData.roomId &&
               getInvalidRoomLinenCount &&
               getInvalidRoomLinenCount() > 0 && (
@@ -820,104 +957,105 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 </thead>
                 <tbody>
                   {linens
-                    .filter((linen) => linen.epc?.trim()) // Only show rows with EPC data
-                    .map((linen, filteredIndex) => {
-                      // Use the filtered index for row numbering
-                      return (
-                        <tr
-                          key={linen.epc}
-                          className={`${getRowColor(
-                            linen
-                          )} transition-colors duration-200`}
-                        >
-                          <td className="px-4 py-3 text-sm text-gray-700 border-b">
-                            {filteredIndex + 1}
-                            {linen.epc && (
-                              <span className="ml-2 text-xs text-green-600">
-                                ✓ Scanned
-                              </span>
-                            )}
-                            {linen.isValidCustomer === false && (
-                              <span className="ml-2 text-xs text-red-600">
-                                ✗ Invalid
-                              </span>
-                            )}
-                            {linen.isValidRoom === false && (
-                              <span className="ml-2 text-xs text-red-600">
-                                ✗ Wrong Room
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 border-b">
-                            <input
-                              type="text"
-                              value={linen.epc}
-                              readOnly
-                              placeholder="Auto-filled dari scan RFID"
-                              className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
-                                linen.isValidCustomer === false ||
-                                linen.isValidRoom === false
-                                  ? "border-red-300 bg-red-50"
-                                  : linen.epc
-                                  ? "bg-green-50 border-green-300"
-                                  : "border-gray-300"
-                              }`}
-                            />
-                          </td>
+                    .filter((linen) => linen.epc?.trim())
+                    .map((linen, filteredIndex) => (
+                      <tr
+                        key={linen.epc}
+                        className={`${getRowColor(
+                          linen
+                        )} transition-colors duration-200`}
+                      >
+                        <td className="px-4 py-3 text-sm text-gray-700 border-b">
+                          {filteredIndex + 1}
+                          {linen.epc && (
+                            <span className="ml-2 text-xs text-green-600">
+                              ✓ Scanned
+                            </span>
+                          )}
+                          {linen.isValidCustomer === false && (
+                            <span className="ml-2 text-xs text-red-600">
+                              ✗ Invalid
+                            </span>
+                          )}
+                          {linen.isValidRoom === false && (
+                            <span className="ml-2 text-xs text-red-600">
+                              ✗ Wrong Room
+                            </span>
+                          )}
+                        </td>
 
-                          <td className="px-4 py-3 border-b">
-                            {linen.isValidCustomer === false &&
-                            linen.errorMessage ? (
-                              <div className="text-xs text-red-600">
-                                {linen.errorMessage}
-                              </div>
-                            ) : linen.customerName ? (
-                              <div className="text-xs text-green-600">
-                                {linen.customerName}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-gray-400">-</div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 border-b">
-                            {linen.linenName || linen.linenTypeName ? (
-                              <div className="text-sm text-gray-700">
-                                {linen.linenName || linen.linenTypeName}
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-400">-</div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 border-b">
-                            {linen.roomName ? (
-                              <div className="text-xs text-gray-700">
-                                {linen.roomName}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-gray-400">-</div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 border-b">
-                            {linen.loading ? (
-                              <div className="flex items-center justify-center">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                <span className="ml-2 text-xs text-gray-500">
-                                  Loading...
-                                </span>
-                              </div>
-                            ) : (
-                              <div
-                                className={`px-2 py-1 rounded text-xs font-medium text-center ${getStatusColor(
-                                  linen.status
-                                )}`}
-                              >
-                                {linen.status || "Unknown"}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        <td className="px-4 py-3 border-b">
+                          <input
+                            type="text"
+                            value={linen.epc}
+                            readOnly
+                            placeholder="Auto-filled dari scan RFID"
+                            className={`w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
+                              linen.isValidCustomer === false ||
+                              linen.isValidRoom === false
+                                ? "border-red-300 bg-red-50"
+                                : linen.epc
+                                ? "bg-green-50 border-green-300"
+                                : "border-gray-300"
+                            }`}
+                          />
+                        </td>
+
+                        <td className="px-4 py-3 border-b">
+                          {linen.isValidCustomer === false &&
+                          linen.errorMessage ? (
+                            <div className="text-xs text-red-600">
+                              {linen.errorMessage}
+                            </div>
+                          ) : linen.customerName ? (
+                            <div className="text-xs text-green-600">
+                              {linen.customerName}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-400">-</div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 border-b">
+                          {linen.linenName || linen.linenTypeName ? (
+                            <div className="text-sm text-gray-700">
+                              {linen.linenName || linen.linenTypeName}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-400">-</div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 border-b">
+                          {linen.roomName ? (
+                            <div className="text-xs text-gray-700">
+                              {linen.roomName}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-400">-</div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 border-b">
+                          {linen.loading ? (
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                              <span className="ml-2 text-xs text-gray-500">
+                                Loading...
+                              </span>
+                            </div>
+                          ) : (
+                            <div
+                              className={`px-2 py-1 rounded text-xs font-medium text-center ${getStatusColor(
+                                linen.status
+                              )}`}
+                            >
+                              {linen.status || "Unknown"}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -930,6 +1068,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               disabled={
                 !formData.customerId ||
                 !formData.driverName.trim() ||
+                !formData.shift ||
+                !formData.dateShift ||
                 getValidLinenCount() === 0 ||
                 (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0) ||
                 submitDisabled
@@ -937,6 +1077,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
               className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                 !formData.customerId ||
                 !formData.driverName.trim() ||
+                !formData.shift ||
+                !formData.dateShift ||
                 getValidLinenCount() === 0 ||
                 (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0) ||
                 submitDisabled

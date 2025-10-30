@@ -225,238 +225,236 @@ const Cetak = () => {
   };
 
   return (
-    <div className="font-poppins">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
-              <FileText size={24} />
-              Cetak Final DO
-            </h1>
+    <div className="font-poppins bg-white rounded-lg shadow-lg p-6">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
+            <FileText size={24} />
+            Cetak Final DO
+          </h1>
+        </div>
+
+        {/* Customer and Date Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Pilih Customer <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={
+                formData.customerId
+                  ? getCustomerById(formData.customerId)
+                  : null
+              }
+              onChange={handleCustomerChange}
+              options={customers}
+              getOptionLabel={(customer) =>
+                `${customer.customerName} (${customer.customerCity})`
+              }
+              getOptionValue={(customer) => customer.customerId}
+              placeholder="Cari customer..."
+              isClearable
+              isSearchable
+              isLoading={loadingCustomers}
+              noOptionsMessage={() => "Customer tidak ditemukan"}
+              className="w-full"
+              classNamePrefix="react-select"
+              styles={{
+                control: (baseStyles, state) => ({
+                  ...baseStyles,
+                  borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+                  boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
+                  fontSize: "14px",
+                  minHeight: "38px",
+                }),
+                option: (baseStyles) => ({
+                  ...baseStyles,
+                  fontSize: "14px",
+                }),
+              }}
+            />
           </div>
 
-          {/* Customer and Date Info */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pilih Customer <span className="text-red-500">*</span>
-              </label>
-              <Select
-                value={
-                  formData.customerId
-                    ? getCustomerById(formData.customerId)
-                    : null
-                }
-                onChange={handleCustomerChange}
-                options={customers}
-                getOptionLabel={(customer) =>
-                  `${customer.customerName} (${customer.customerCity})`
-                }
-                getOptionValue={(customer) => customer.customerId}
-                placeholder="Cari customer..."
-                isClearable
-                isSearchable
-                isLoading={loadingCustomers}
-                noOptionsMessage={() => "Customer tidak ditemukan"}
-                className="w-full"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (baseStyles, state) => ({
-                    ...baseStyles,
-                    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
-                    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
-                    fontSize: "14px",
-                    minHeight: "38px",
-                  }),
-                  option: (baseStyles) => ({
-                    ...baseStyles,
-                    fontSize: "14px",
-                  }),
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tanggal Mulai <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleDateChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tanggal Akhir <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleDateChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tanggal Mulai <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleDateChange}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-between items-center gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tanggal Akhir <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              name="endDate"
+              value={formData.endDate}
+              onChange={handleDateChange}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center gap-4">
+          <button
+            type="button"
+            onClick={fetchReportData}
+            disabled={
+              loading ||
+              !formData.customerId ||
+              !formData.startDate ||
+              !formData.endDate
+            }
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
+              loading ||
+              !formData.customerId ||
+              !formData.startDate ||
+              !formData.endDate
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-primary hover:bg-blue-700"
+            }`}
+          >
+            <Calendar size={16} />
+            {loading ? "Memuat Data..." : "Ambil Data"}
+          </button>
+
+          <div className="flex gap-2">
+            {/* Print Button */}
             <button
               type="button"
-              onClick={fetchReportData}
-              disabled={
-                loading ||
-                !formData.customerId ||
-                !formData.startDate ||
-                !formData.endDate
-              }
-              className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
-                loading ||
-                !formData.customerId ||
-                !formData.startDate ||
-                !formData.endDate
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-primary hover:bg-blue-700"
+              onClick={handlePrint}
+              disabled={printDisabled || !isBrowserPrintLoaded}
+              className={`bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${
+                printDisabled || !isBrowserPrintLoaded
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : ""
               }`}
+              title={
+                printDisabled
+                  ? "Ambil data terlebih dahulu untuk print"
+                  : "Print laporan linen"
+              }
             >
-              <Calendar size={16} />
-              {loading ? "Memuat Data..." : "Ambil Data"}
+              <Printer size={16} />
+              <span>Print</span>
             </button>
 
-            <div className="flex gap-2">
-              {/* Print Button */}
-              <button
-                type="button"
-                onClick={handlePrint}
-                disabled={printDisabled || !isBrowserPrintLoaded}
-                className={`bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${
-                  printDisabled || !isBrowserPrintLoaded
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : ""
-                }`}
-                title={
-                  printDisabled
-                    ? "Ambil data terlebih dahulu untuk print"
-                    : "Print laporan linen"
-                }
+            {/* Printer Selection */}
+            {devices.length > 0 && (
+              <select
+                onChange={(e) => handleDeviceChange(e.target.value)}
+                defaultValue={selectedDevice?.uid}
+                className="px-2 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <Printer size={16} />
-                <span>Print</span>
-              </button>
-
-              {/* Printer Selection */}
-              {devices.length > 0 && (
-                <select
-                  onChange={(e) => handleDeviceChange(e.target.value)}
-                  defaultValue={selectedDevice?.uid}
-                  className="px-2 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {devices.map((device, index) => (
-                    <option key={index} value={device.uid}>
-                      {device.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+                {devices.map((device, index) => (
+                  <option key={index} value={device.uid}>
+                    {device.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-
-          {/* Report Data Table */}
-          <div>
-            <div className="overflow-x-auto">
-              <table className="w-full border border-gray-300 rounded-lg">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      QTY
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Nama Linen
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                      Ruangan
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan="3"
-                        className="px-4 py-8 text-center text-gray-500 border-b"
-                      >
-                        {loading
-                          ? "Memuat data..."
-                          : "Tidak ada data. Pilih customer dan periode tanggal, lalu klik 'Ambil Data'."}
-                      </td>
-                    </tr>
-                  ) : (
-                    // Group and count items
-                    (() => {
-                      const groupedData = {};
-                      reportData.forEach((item) => {
-                        const key = `${
-                          item.linenName || item.linenTypeName || "Unknown"
-                        }|${item.roomName || "-"}`;
-                        if (!groupedData[key]) {
-                          groupedData[key] = {
-                            linenName:
-                              item.linenName || item.linenTypeName || "Unknown",
-                            roomName: item.roomName || "-",
-                            count: 0,
-                          };
-                        }
-                        groupedData[key].count++;
-                      });
-
-                      return Object.values(groupedData).map((item, index) => (
-                        <tr
-                          key={`${item.linenName}-${item.roomName}`}
-                          className={`${getRowColor(
-                            index
-                          )} transition-colors duration-200`}
-                        >
-                          <td className="px-4 py-3 text-sm text-gray-700 border-b font-medium">
-                            {item.count}
-                          </td>
-                          <td className="px-4 py-3 border-b">
-                            <div className="text-sm text-gray-700">
-                              {item.linenName}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 border-b">
-                            <div className="text-sm text-gray-700">
-                              {item.roomName}
-                            </div>
-                          </td>
-                        </tr>
-                      ));
-                    })()
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Summary */}
-          {reportData.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-blue-800">
-                  Total Item:
-                </span>
-                <span className="text-lg font-bold text-blue-900">
-                  {reportData.length} linen
-                </span>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Report Data Table */}
+        <div>
+          <div className="overflow-x-auto">
+            <table className="w-full border border-gray-300 rounded-lg">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                    QTY
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                    Nama Linen
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
+                    Ruangan
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan="3"
+                      className="px-4 py-8 text-center text-gray-500 border-b"
+                    >
+                      {loading
+                        ? "Memuat data..."
+                        : "Tidak ada data. Pilih customer dan periode tanggal, lalu klik 'Ambil Data'."}
+                    </td>
+                  </tr>
+                ) : (
+                  // Group and count items
+                  (() => {
+                    const groupedData = {};
+                    reportData.forEach((item) => {
+                      const key = `${
+                        item.linenName || item.linenTypeName || "Unknown"
+                      }|${item.roomName || "-"}`;
+                      if (!groupedData[key]) {
+                        groupedData[key] = {
+                          linenName:
+                            item.linenName || item.linenTypeName || "Unknown",
+                          roomName: item.roomName || "-",
+                          count: 0,
+                        };
+                      }
+                      groupedData[key].count++;
+                    });
+
+                    return Object.values(groupedData).map((item, index) => (
+                      <tr
+                        key={`${item.linenName}-${item.roomName}`}
+                        className={`${getRowColor(
+                          index
+                        )} transition-colors duration-200`}
+                      >
+                        <td className="px-4 py-3 text-sm text-gray-700 border-b font-medium">
+                          {item.count}
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          <div className="text-sm text-gray-700">
+                            {item.linenName}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          <div className="text-sm text-gray-700">
+                            {item.roomName}
+                          </div>
+                        </td>
+                      </tr>
+                    ));
+                  })()
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Summary */}
+        {reportData.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-blue-800">
+                Total Item:
+              </span>
+              <span className="text-lg font-bold text-blue-900">
+                {reportData.length} linen
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
