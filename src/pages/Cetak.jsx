@@ -225,14 +225,15 @@ const Cetak = () => {
   };
 
   return (
-    <div className="font-poppins bg-white rounded-lg shadow-lg p-6">
+    <div className="font-poppins bg-white rounded-lg shadow-lg px-6 pb-4 pt-2">
       <div className="space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
+        <div className="text-left">
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <FileText size={24} />
             Cetak Final DO
           </h1>
+          <div className="border-b-2 border-gray-300 mt-2"></div>
         </div>
 
         {/* Customer and Date Info */}

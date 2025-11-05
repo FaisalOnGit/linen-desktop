@@ -215,7 +215,7 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
                 commands: [
                   {
                     id: "cetak",
-                    label: "Cetak\nLaporan",
+                    label: "Cetak\nDO",
                     icon: FileOutput,
                     size: "large",
                     description: "Print linen reports",

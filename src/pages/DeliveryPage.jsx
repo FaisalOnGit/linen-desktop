@@ -6,67 +6,7 @@ import { useLinenData } from "../hooks/useLinenData";
 import { useCustomers } from "../hooks/useCustomers";
 import { useRooms } from "../hooks/useRooms";
 import usePrint from "../hooks/usePrint";
-
-// Custom hook for dateShift management
-const useDateShift = (initialShift) => {
-  const [dateShift, setDateShift] = useState("");
-  const [dateShiftWithTime, setDateShiftWithTime] = useState("");
-
-  const getDateForShift = (shift) => {
-    const today = new Date();
-
-    switch (shift) {
-      case "1":
-        today.setHours(13, 0, 0, 0); // Set to 13:00:00 local time
-        break;
-      case "2":
-        today.setHours(16, 0, 0, 0); // Set to 16:00:00 local time
-        break;
-      case "3":
-        today.setHours(19, 0, 0, 0); // Set to 19:00:00 local time
-        break;
-      default:
-        today.setHours(0, 0, 0, 0); // Default to midnight
-        break;
-    }
-
-    return today;
-  };
-
-  const formatDateTime = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-  };
-
-  const updateDateShift = (shift) => {
-    if (shift) {
-      const newDate = getDateForShift(shift);
-      const dateOnly = newDate.toISOString().split("T")[0]; // YYYY-MM-DD for display
-      const dateWithTime = formatDateTime(newDate); // Local time format (YYYY-MM-DDTHH:mm:ss)
-
-      setDateShift(dateOnly);
-      setDateShiftWithTime(dateWithTime);
-    } else {
-      setDateShift("");
-      setDateShiftWithTime("");
-    }
-  };
-
-  // Initialize dateShift when component mounts or shift changes
-  useEffect(() => {
-    if (initialShift) {
-      updateDateShift(initialShift);
-    }
-  }, [initialShift]);
-
-  return { dateShift, dateShiftWithTime, updateDateShift };
-};
+import useDateShift from "../hooks/useDateShift";
 
 const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const {
@@ -672,6 +612,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
             <h1 className="text-xl font-bold text-gray-800">
               {currentDeliveryType.title}
             </h1>
+            <div className="border-b-2 border-gray-300 mt-2"></div>
           </div>
 
           {/* Shift, Tanggal, Nama Customer Service, dan Tombol Set */}
@@ -871,13 +812,13 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   type="button"
                   onClick={handleToggleScan}
                   className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-white transition-all duration-300 transform hover:scale-105 ${
-                    !isRfidAvailable
+                    !isRfidAvailable || !formData.shift
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : isDeliveryActive
                       ? "bg-red-600 hover:bg-red-700"
                       : "bg-primary hover:bg-blue-700"
                   }`}
-                  disabled={!isRfidAvailable}
+                  disabled={!isRfidAvailable || !formData.shift}
                 >
                   {isDeliveryActive ? (
                     <>

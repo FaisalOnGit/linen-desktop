@@ -1,7 +1,7 @@
 {
   "name": "osla-desktop",
   "productName": "OSLA",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "electron/main.js",
   "author": "Nuansa Cerah Informasi",
   "license": "MIT",
