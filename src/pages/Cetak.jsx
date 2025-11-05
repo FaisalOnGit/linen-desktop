@@ -19,6 +19,7 @@ const Cetak = () => {
     customerName: "",
     startDate: formatDateYYYYMMDD(new Date()), // Today's date in YYYY-MM-DD format
     endDate: formatDateYYYYMMDD(new Date()), // Today's date in YYYY-MM-DD format
+    deliveryTypeId: "", // Tipe pengiriman
   });
 
   const [reportData, setReportData] = useState([]);
@@ -56,16 +57,20 @@ const Cetak = () => {
     setLoading(true);
     try {
       const token = await window.authAPI.getToken();
-      const response = await fetch(
-        `${baseUrl}/Process/print_delivery?customerId=${formData.customerId}&deliveryDate=${formData.startDate}&deliveryDateEnd=${formData.endDate}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+
+      // Build API URL with delivery_type_id parameter
+      let apiUrl = `${baseUrl}/Process/print_delivery?customerId=${formData.customerId}&deliveryDate=${formData.startDate}&deliveryDateEnd=${formData.endDate}`;
+      if (formData.deliveryTypeId) {
+        apiUrl += `&delivery_type_id=${formData.deliveryTypeId}`;
+      }
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       const result = await response.json();
       console.log("API response:", result);
@@ -154,6 +159,17 @@ const Cetak = () => {
     setPrintDisabled(true);
   };
 
+  const handleDeliveryTypeChange = (e) => {
+    const { value } = e.target;
+    const newFormData = {
+      ...formData,
+      deliveryTypeId: value,
+    };
+    setFormData(newFormData);
+    setReportData([]);
+    setPrintDisabled(true);
+  };
+
   // Print handler
   const handlePrint = async () => {
     if (reportData.length === 0) {
@@ -193,13 +209,25 @@ const Cetak = () => {
         });
       });
 
+      // Get delivery type label
+      const deliveryTypes = {
+        "": "Semua Pengiriman",
+        "0": "Semua Pengiriman",
+        "1": "Pengiriman Baru",
+        "2": "Pengiriman Reguler",
+        "3": "Pengiriman Rewash",
+        "4": "Pengiriman Retur",
+      };
+
+      const deliveryTypeLabel = deliveryTypes[formData.deliveryTypeId] || "Semua Pengiriman";
+
       // Create print data
       const printData = {
         deliveryNumber: `LAPORAN-${formData.startDate} s/d ${formData.endDate}`,
         customer: formData.customerName,
         room: "Berbagai Ruangan", // Will be overridden by room grouping in print
         totalLinen: reportData.length.toString(),
-        deliveryType: "DO LINEN BARU",
+        deliveryType: deliveryTypeLabel,
         driverLabel: "Periode",
         driverName: `${formData.startDate} s/d ${formData.endDate}`, // Show the date range
         linenItems: linenItems,
@@ -236,8 +264,8 @@ const Cetak = () => {
           <div className="border-b-2 border-gray-300 mt-2"></div>
         </div>
 
-        {/* Customer and Date Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Customer, Date, and Delivery Type Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Pilih Customer <span className="text-red-500">*</span>
@@ -301,6 +329,25 @@ const Cetak = () => {
               onChange={handleDateChange}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tipe Pengiriman
+            </label>
+            <select
+              name="deliveryTypeId"
+              value={formData.deliveryTypeId}
+              onChange={handleDeliveryTypeChange}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Semua Pengiriman</option>
+              <option value="0">Semua Pengiriman</option>
+              <option value="1">Pengiriman Baru</option>
+              <option value="2">Pengiriman Reguler</option>
+              <option value="3">Pengiriman Rewash</option>
+              <option value="4">Pengiriman Retur</option>
+            </select>
           </div>
         </div>
 

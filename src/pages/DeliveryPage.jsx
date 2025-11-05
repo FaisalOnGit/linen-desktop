@@ -27,7 +27,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
   const currentDeliveryType = deliveryTypes[deliveryType] || deliveryTypes[1];
 
-  // Form state
   const [formData, setFormData] = useState({
     customerId: "",
     customerName: "",
@@ -615,31 +614,44 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
             <div className="border-b-2 border-gray-300 mt-2"></div>
           </div>
 
-          {/* Shift, Tanggal, Nama Customer Service, dan Tombol Set */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Shift <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="shift"
-                value={formData.shift}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                <option value="">Pilih Shift</option>
-                <option value="1">Shift 1</option>
-                <option value="2">Shift 2</option>
-                <option value="3">Shift 3</option>
-              </select>
-            </div>
+          {/* Tanggal Transaksi, Shift & Tanggal, Nama Customer Service, dan Tombol Set */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tanggal Transaksi
+                </label>
+                <input
+                  type="date"
+                  value={new Date().toISOString().split("T")[0]}
+                  readOnly
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
+                  title="Tanggal transaksi hari ini"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tanggal <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Shift <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="shift"
+                  value={formData.shift}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Pilih Shift</option>
+                  <option value="1">Shift 1</option>
+                  <option value="2">Shift 2</option>
+                  <option value="3">Shift 3</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tanggal Shift <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="date"
                   name="dateShift"
@@ -648,55 +660,44 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-600 font-medium bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
-                  {currentTime.toLocaleTimeString("id-ID", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  })}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nama Customer Service <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="driverName"
+                    value={formData.driverName}
+                    onChange={handleChange}
+                    disabled
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
+                    placeholder="Nama driver otomatis dari user login"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimeout(() => {
+                        saveToLocalStorage();
+                      }, 100);
+
+                      const message = formData.shift
+                        ? `Shift ${formData.shift} berhasil disimpan!`
+                        : "Pilih shift terlebih dahulu!";
+                      toast.success(message, {
+                        duration: 2000,
+                        icon: "✅",
+                      });
+                    }}
+                    className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
+                    title="Simpan shift yang dipilih ke localStorage"
+                  >
+                    Set
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nama Customer Service <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="driverName"
-                value={formData.driverName}
-                onChange={handleChange}
-                disabled
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
-                placeholder="Nama driver otomatis dari user login"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                &nbsp;
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setTimeout(() => {
-                    saveToLocalStorage();
-                  }, 100);
-
-                  const message = formData.shift
-                    ? `Shift ${formData.shift} berhasil disimpan!`
-                    : "Pilih shift terlebih dahulu!";
-                  toast.success(message, {
-                    duration: 2000,
-                    icon: "✅",
-                  });
-                }}
-                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                title="Simpan shift yang dipilih ke localStorage"
-              >
-                Set
-              </button>
             </div>
           </div>
 
