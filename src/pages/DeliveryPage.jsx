@@ -616,7 +616,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
           {/* Tanggal Transaksi, Shift & Tanggal, Nama Customer Service, dan Tombol Set */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tanggal Transaksi
@@ -632,34 +632,30 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Shift <span className="text-red-500">*</span>
+                  Shift & Tanggal Shift <span className="text-red-500">*</span>
                 </label>
-                <select
-                  name="shift"
-                  value={formData.shift}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Pilih Shift</option>
-                  <option value="1">Shift 1</option>
-                  <option value="2">Shift 2</option>
-                  <option value="3">Shift 3</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tanggal Shift <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="dateShift"
-                  value={formData.dateShift}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
+                <div className="flex gap-2">
+                  <select
+                    name="shift"
+                    value={formData.shift}
+                    onChange={handleChange}
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Pilih Shift</option>
+                    <option value="1">Shift 1</option>
+                    <option value="2">Shift 2</option>
+                    <option value="3">Shift 3</option>
+                  </select>
+                  <input
+                    type="date"
+                    name="dateShift"
+                    value={formData.dateShift}
+                    onChange={handleChange}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
               </div>
 
               <div>

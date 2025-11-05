@@ -164,12 +164,20 @@ const usePrintCetak = () => {
     const finalY = startY + totalLinenHeight + 40;
     const labelHeight = Math.max(900, finalY + 250); // Increased minimum height and extra space for better spacing
 
+    // Calculate centered position for delivery type
+    const deliveryTypeText = deliveryData.deliveryType || "DELIVERY";
+    const textLength = deliveryTypeText.length;
+    const charWidth = 22;
+    const textWidth = textLength * charWidth;
+    const labelWidth = 700; // Total label width
+    const centeredX = Math.max(70, Math.floor((labelWidth - textWidth) / 2));
+
     let zpl = `^XA
 ^LL${labelHeight}
 ^FO100,50^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
 ^FO250,90^A0N,35,35^FD(OSLA)^FS
 
-^FO185,125^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
+^FO${centeredX},125^A0N,35,35^FD${deliveryTypeText}^FS
 
 ^FO230,165^A0N,20,20^FD${currentDate}^FS
 

@@ -88,7 +88,7 @@ const Cetak = () => {
                   reportData.push({
                     linenName: item.linenName || item.linen_name || "Unknown",
                     roomName: room.room_name || room.roomName || "Unknown",
-                    // Generate dummy EPC if not provided
+
                     epc: `E2022F75100CA6A9AAA5C2${reportData.length + 1001}`,
                   });
                 }
@@ -212,14 +212,15 @@ const Cetak = () => {
       // Get delivery type label
       const deliveryTypes = {
         "": "Semua Pengiriman",
-        "0": "Semua Pengiriman",
-        "1": "Pengiriman Baru",
-        "2": "Pengiriman Reguler",
-        "3": "Pengiriman Rewash",
-        "4": "Pengiriman Retur",
+        0: "Semua Pengiriman",
+        1: "Pengiriman Baru",
+        2: "Pengiriman Reguler",
+        3: "Pengiriman Rewash",
+        4: "Pengiriman Retur",
       };
 
-      const deliveryTypeLabel = deliveryTypes[formData.deliveryTypeId] || "Semua Pengiriman";
+      const deliveryTypeLabel =
+        deliveryTypes[formData.deliveryTypeId] || "Semua Pengiriman";
 
       // Create print data
       const printData = {
