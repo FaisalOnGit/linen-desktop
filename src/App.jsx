@@ -82,10 +82,32 @@ const App = () => {
   };
 
   useEffect(() => {
+    // Add multiple cleanup approaches
+    const handleBeforeUnload = () => {
+      console.log('App unloading - clearing deliveryPersistentData...');
+      localStorage.removeItem('deliveryPersistentData');
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('App hidden - clearing deliveryPersistentData...');
+        localStorage.removeItem('deliveryPersistentData');
+      }
+    };
+
+    // Add event listeners for multiple scenarios
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       rfidHook.clearAllData();
       // Clear delivery persistent data when app closes
       localStorage.removeItem('deliveryPersistentData');
+      console.log('App cleanup - deliveryPersistentData cleared');
+
+      // Remove event listeners
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [rfidHook.clearAllData]);
 

@@ -289,6 +289,25 @@ function createWindow() {
     win.loadFile(indexPath);
   }
 
+  // Clear localStorage when window is about to close
+  win.on("closed", () => {
+    console.log("Window closed, clearing localStorage...");
+    try {
+      // Execute localStorage clear operation
+      win.webContents.executeJavaScript(`
+        try {
+          localStorage.removeItem('deliveryPersistentData');
+          console.log('deliveryPersistentData cleared on window closed');
+        } catch(e) {
+          console.error('Failed to clear localStorage:', e);
+        }
+      `);
+    } catch (error) {
+      console.error("Error executing localStorage clear:", error);
+    }
+    mainWindow = null;
+  });
+
   // Original audio functionality
   ipcMain.handle("select-folder", async () => {
     const result = await dialog.showOpenDialog(win, {
@@ -755,6 +774,21 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  // Clear delivery persistent data when window closes
+  try {
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(`
+        localStorage.removeItem('deliveryPersistentData');
+        console.log('deliveryPersistentData cleared on window close');
+      `);
+    }
+  } catch (error) {
+    console.error(
+      "Error clearing deliveryPersistentData on window close:",
+      error
+    );
+  }
+
   // Clean disconnect RFID before closing
   if (isConnected && rfidInitialized) {
     disconnect(null, (err, res) => {
@@ -779,5 +813,17 @@ app.on("before-quit", () => {
     } catch (error) {
       console.error("Error during force RFID disconnect:", error);
     }
+  }
+
+  // Clear delivery persistent data when app quits
+  try {
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(`
+        localStorage.removeItem('deliveryPersistentData');
+        console.log('deliveryPersistentData cleared on app quit');
+      `);
+    }
+  } catch (error) {
+    console.error("Error clearing deliveryPersistentData:", error);
   }
 });

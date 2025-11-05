@@ -3,6 +3,17 @@ const { contextBridge, ipcRenderer } = require("electron");
 // Global token storage
 let globalToken = null;
 
+// Clear localStorage when window is about to close
+window.addEventListener("beforeunload", () => {
+  console.log("Window unloading, clearing deliveryPersistentData...");
+  try {
+    localStorage.removeItem("deliveryPersistentData");
+    console.log("deliveryPersistentData cleared on beforeunload");
+  } catch (error) {
+    console.error("Error clearing deliveryPersistentData:", error);
+  }
+});
+
 // Your existing API
 contextBridge.exposeInMainWorld("electronAPI", {
   selectFolder: () => ipcRenderer.invoke("select-folder"),
