@@ -19,7 +19,7 @@ const Cetak = () => {
     customerName: "",
     startDate: formatDateYYYYMMDD(new Date()), // Today's date in YYYY-MM-DD format
     endDate: formatDateYYYYMMDD(new Date()), // Today's date in YYYY-MM-DD format
-    deliveryTypeId: "", // Tipe pengiriman
+    deliveryTypeId: "1", // Default: Pengiriman Baru
   });
 
   const [reportData, setReportData] = useState([]);
@@ -88,7 +88,6 @@ const Cetak = () => {
                   reportData.push({
                     linenName: item.linenName || item.linen_name || "Unknown",
                     roomName: room.room_name || room.roomName || "Unknown",
-
                     epc: `E2022F75100CA6A9AAA5C2${reportData.length + 1001}`,
                   });
                 }
@@ -260,7 +259,7 @@ const Cetak = () => {
         <div className="text-left">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <FileText size={24} />
-            Cetak Final DO
+            Cetak DO
           </h1>
           <div className="border-b-2 border-gray-300 mt-2"></div>
         </div>
@@ -334,7 +333,7 @@ const Cetak = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipe Pengiriman
+              Pilih Cetak DO
             </label>
             <select
               name="deliveryTypeId"
@@ -342,8 +341,6 @@ const Cetak = () => {
               onChange={handleDeliveryTypeChange}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Semua Pengiriman</option>
-              <option value="0">Semua Pengiriman</option>
               <option value="1">Pengiriman Baru</option>
               <option value="2">Pengiriman Reguler</option>
               <option value="3">Pengiriman Rewash</option>
