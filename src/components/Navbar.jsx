@@ -150,7 +150,7 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
                   },
                   {
                     id: "delivery-regular",
-                    label: "Pengiriman\nReguler",
+                    label: "Pengiriman\nBersih",
                     icon: Package,
                     size: "large",
                     description: "Regular delivery shipments",

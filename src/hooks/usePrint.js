@@ -140,7 +140,7 @@ const usePrint = () => {
     let zpl = `^XA
 ^LL${labelHeight}
 ^FO100,50^A0N,35,35^FDPT JALIN MITRA NUSANTARA^FS
-^FO220,90^A0N,28,28^FD(Obsesiman)^FS
+^FO250,90^A0N,35,35^FD(OSLA)^FS
 
 ^FO150,125^A0N,35,35^FD${deliveryData.deliveryType || "DELIVERY"}^FS
 

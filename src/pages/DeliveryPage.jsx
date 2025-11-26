@@ -20,7 +20,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   // Delivery types configuration
   const deliveryTypes = {
     1: { title: "Pengiriman Baru" },
-    2: { title: "Pengiriman Reguler" },
+    2: { title: "Pengiriman Bersih" },
     3: { title: "Pengiriman Rewash" },
     4: { title: "Pengiriman Retur" },
   };
@@ -43,6 +43,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const [lastDeliveryData, setLastDeliveryData] = useState(null);
   const [submitDisabled, setSubmitDisabled] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isManualDate, setIsManualDate] = useState(false);
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
@@ -85,8 +86,22 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
             plateNumber: "-",
             roomId: "",
             shift: savedData.shift || "",
-            dateShift: "", // Will be set by custom hook
+            dateShift: savedData.dateShift || "", // Load from localStorage
           });
+
+          // Set manual date flag from localStorage
+          if (savedData.isManualDate !== undefined) {
+            setIsManualDate(savedData.isManualDate);
+          }
+
+          // If there's saved shift and it's not manual date and no saved dateShift, update using hook
+          if (
+            savedData.shift &&
+            !savedData.isManualDate &&
+            !savedData.dateShift
+          ) {
+            updateDateShift(savedData.shift);
+          }
         });
       } catch (error) {
         setFormData({
@@ -105,15 +120,20 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     loadPersistentData();
   }, []);
 
-  // Update form data with custom hook dateShift
+  // Update form data with custom hook dateShift (only if not manual date and form is empty)
   useEffect(() => {
-    if (dateShift && formData.dateShift !== dateShift) {
+    if (
+      dateShift &&
+      formData.dateShift !== dateShift &&
+      !isManualDate &&
+      !formData.dateShift
+    ) {
       setFormData((prev) => ({
         ...prev,
         dateShift: dateShift,
       }));
     }
-  }, [dateShift, formData.dateShift]);
+  }, [dateShift, formData.dateShift, isManualDate]);
 
   // Save persistent data to localStorage
   const saveToLocalStorage = () => {
@@ -121,6 +141,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       shift: formData.shift,
       dateShift: formData.dateShift,
       driverName: formData.driverName,
+      isManualDate: isManualDate,
     };
 
     try {
@@ -225,8 +246,22 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           driverName: savedData.driverName || driverName,
           plateNumber: "-",
           shift: savedData.shift || "",
-          dateShift: "", // Will be set by custom hook
+          dateShift: savedData.dateShift || "", // Load from localStorage
         });
+
+        // Set manual date flag from localStorage
+        if (savedData.isManualDate !== undefined) {
+          setIsManualDate(savedData.isManualDate);
+        }
+
+        // If there's saved shift and it's not manual date and no saved dateShift, update using hook
+        if (
+          savedData.shift &&
+          !savedData.isManualDate &&
+          !savedData.dateShift
+        ) {
+          updateDateShift(savedData.shift);
+        }
       });
     } catch (error) {
       setFormData((prev) => ({
@@ -239,6 +274,9 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         dateShift: "", // Will be set by custom hook
       }));
     }
+
+    // Reset manual date flag when delivery type changes
+    setIsManualDate(false);
 
     // Stop RFID scanning if active
     if (isDeliveryActive) {
@@ -258,9 +296,14 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
 
     setFormData({ ...formData, [name]: processedValue });
 
-    // Update dateShift using custom hook when shift changes
-    if (name === "shift") {
+    // Update dateShift using custom hook when shift changes (only if not manual date)
+    if (name === "shift" && !isManualDate) {
       updateDateShift(value);
+    }
+
+    // Mark as manual date when dateShift is manually changed
+    if (name === "dateShift") {
+      setIsManualDate(true);
     }
 
     // Save to localStorage when shift or dateShift is manually changed
@@ -268,6 +311,34 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       setTimeout(() => {
         saveToLocalStorage();
       }, 100);
+    }
+
+    // Save manual date flag to localStorage when it changes
+    if (name === "dateShift" && isManualDate) {
+      setTimeout(() => {
+        saveToLocalStorage();
+      }, 100);
+    }
+  };
+
+  // Handle date reset to use hook logic
+  const handleUseShiftDate = () => {
+    if (formData.shift) {
+      setIsManualDate(false);
+      updateDateShift(formData.shift);
+      // Save to localStorage after reset
+      setTimeout(() => {
+        saveToLocalStorage();
+      }, 100);
+      toast.success(`Tanggal direset ke aturan Shift ${formData.shift}`, {
+        duration: 2000,
+        icon: "✅",
+      });
+    } else {
+      toast.error("Pilih shift terlebih dahulu!", {
+        duration: 2000,
+        icon: "⚠️",
+      });
     }
   };
 
@@ -303,6 +374,9 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         plateNumber: prev.plateNumber,
       }));
 
+      // Reset manual date flag
+      setIsManualDate(false);
+
       setDeliverySubmitted(false);
       setLastDeliveryData(null);
       setSubmitDisabled(false);
@@ -315,6 +389,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         setDeliverySubmitted(false);
         setLastDeliveryData(null);
         setSubmitDisabled(false);
+        setIsManualDate(false);
       }, 50);
 
       setTimeout(() => {
@@ -325,6 +400,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         setDeliverySubmitted(false);
         setLastDeliveryData(null);
         setSubmitDisabled(false);
+        setIsManualDate(false);
       }, 200);
     } catch (error) {
       toast.error("Gagal membersihkan data!", {
@@ -412,6 +488,29 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         return;
       }
 
+      // Get dateShift from localStorage for payload
+      let payloadDateShift;
+      try {
+        const persistentData = localStorage.getItem("deliveryPersistentData");
+        const savedData = persistentData ? JSON.parse(persistentData) : {};
+
+        if (savedData.isManualDate && savedData.dateShift) {
+          // Use manual date from localStorage with current time
+          payloadDateShift = `${savedData.dateShift}T${String(
+            new Date().getHours()
+          ).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(
+            2,
+            "0"
+          )}:00`;
+        } else {
+          // Use hook time or current form date
+          payloadDateShift = dateShiftWithTime || formData.dateShift;
+        }
+      } catch (error) {
+        // Fallback to hook time or current form date
+        payloadDateShift = dateShiftWithTime || formData.dateShift;
+      }
+
       // Create payload
       const payload = {
         deliveryTypeId: deliveryType,
@@ -420,7 +519,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         driverName: formData.driverName,
         plateNumber: formData.plateNumber,
         shift: formData.shift,
-        dateShift: dateShiftWithTime || formData.dateShift, // Use ISO format with time
+        dateShift: payloadDateShift,
         linens: validLinens.map((linen) => ({
           epc: linen.epc,
           status_id: linen.statusId || 1,
@@ -655,23 +754,6 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nama Customer Service <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    name="driverName"
-                    value={formData.driverName}
-                    onChange={handleChange}
-                    disabled
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
-                    placeholder="Nama driver otomatis dari user login"
-                  />
                   <button
                     type="button"
                     onClick={() => {
@@ -693,6 +775,21 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                     Set
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nama Customer Service <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="driverName"
+                  value={formData.driverName}
+                  onChange={handleChange}
+                  disabled
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
+                  placeholder="Nama driver otomatis dari user login"
+                />
               </div>
             </div>
           </div>
