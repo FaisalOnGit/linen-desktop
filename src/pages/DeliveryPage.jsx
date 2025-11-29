@@ -751,8 +751,10 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                     name="dateShift"
                     value={formData.dateShift}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    readOnly
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
                     required
+                    title="Tanggal shift diatur otomatis berdasarkan shift yang dipilih"
                   />
                   <button
                     type="button"
@@ -928,7 +930,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 </button>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                {/* Total Count Display */}
+                <div className="bg-gray-100 px-3 py-1 rounded-lg text-sm">
+                  <span className="text-gray-600">Total Scan: </span>
+                  <span className="font-semibold text-gray-800">
+                    {linens.filter((linen) => linen.epc?.trim()).length}
+                  </span>
+                </div>
+
                 <button
                   type="button"
                   onClick={handleClearAll}

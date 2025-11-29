@@ -16,8 +16,8 @@ const useDateShift = (initialShift) => {
         today.setHours(16, 0, 0, 0); // Set to 16:00:00 local time
         break;
       case "3":
-        // Jika login antara 00:00-05:00, gunakan hari kemarin untuk shift 3
-        if (currentHour >= 0 && currentHour < 5) {
+        // Jika login antara 00:00-07:00, gunakan hari kemarin untuk shift 3
+        if (currentHour >= 0 && currentHour < 7) {
           today.setDate(today.getDate() - 1);
         }
         today.setHours(19, 0, 0, 0); // Set to 19:00:00 local time
@@ -32,11 +32,11 @@ const useDateShift = (initialShift) => {
 
   const formatDateTime = (date) => {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
 
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };

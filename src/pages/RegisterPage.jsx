@@ -491,7 +491,15 @@ const RegisterPage = ({ rfidHook }) => {
                     placeholder="0"
                   />
                 </div>
-                <div className="mr-3">
+                <div className="flex gap-2 items-center">
+                  {/* Total Count Display */}
+                  <div className="bg-gray-100 px-3 py-1 rounded-lg text-sm">
+                    <span className="text-gray-600">Total: </span>
+                    <span className="font-semibold text-gray-800">
+                      {linens.filter((linen) => linen.epc?.trim()).length}
+                    </span>
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleClearAll}
