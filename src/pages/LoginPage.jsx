@@ -65,7 +65,8 @@ const LoginPage = ({ onLoginSuccess }) => {
         }
       } else {
         // Handle login failure - display API message
-        const errorMessage = data.message || "Login gagal, periksa email/password.";
+        const errorMessage =
+          data.message || "Login gagal, periksa email/password.";
         setError(errorMessage);
       }
     } catch (err) {
@@ -175,6 +176,10 @@ const LoginPage = ({ onLoginSuccess }) => {
               {loading ? "Loading..." : "Login"}
             </button>
           </form>
+          {/* vesrioning */}
+          <div className="text-gray-500 text-sm text-center">
+            versi {import.meta.env.VITE_APP_VERSION}
+          </div>
         </div>
       </div>
     </div>

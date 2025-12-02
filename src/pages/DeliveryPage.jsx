@@ -1160,7 +1160,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0) ||
                 submitDisabled
               }
-              className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+              className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm ${
                 !formData.customerId ||
                 !formData.driverName.trim() ||
                 !formData.shift ||
