@@ -446,6 +446,14 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       return;
     }
 
+    if (!formData.roomId) {
+      toast.error("Pilih room terlebih dahulu!", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+
     const invalidLinenCount = getInvalidLinenCount();
     if (invalidLinenCount > 0) {
       toast.error(
@@ -903,7 +911,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           {/* Linen Table Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <div>
+              <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={handleToggleScan}
@@ -1156,6 +1164,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 !formData.driverName.trim() ||
                 !formData.shift ||
                 !formData.dateShift ||
+                !formData.roomId ||
                 getValidLinenCount() === 0 ||
                 (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0) ||
                 submitDisabled
@@ -1165,6 +1174,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                 !formData.driverName.trim() ||
                 !formData.shift ||
                 !formData.dateShift ||
+                !formData.roomId ||
                 getValidLinenCount() === 0 ||
                 (getInvalidRoomLinenCount && getInvalidRoomLinenCount() > 0) ||
                 submitDisabled
