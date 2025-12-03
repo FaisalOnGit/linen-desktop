@@ -185,9 +185,9 @@ const usePrintCetak = () => {
 
 ^FO70,285^A0N,23,23^FDKlien: ${deliveryData.customer || "-"}^FS
 
-^FO400,285^A0N,23,23^FDTotal: ${deliveryData.totalLinen || "0"}^FS
+^FO70,310^A0N,23,23^FDTotal: ${deliveryData.totalLinen || "0"}^FS
 
-^FO70,335^GB480,0,2^FS
+^FO70,340^GB480,0,2^FS
 
 ${linenItems}
 
