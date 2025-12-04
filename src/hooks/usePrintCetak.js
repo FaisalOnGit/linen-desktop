@@ -147,8 +147,14 @@ const usePrintCetak = () => {
       linenItems += `^FO180,${currentY}^A0N,25,25^FDLinen^FS\n`;
       currentY += lineHeight;
 
-      // Add items for this room
-      roomItems.forEach((item) => {
+      // Add items for this room (sorted alphabetically by name)
+      const sortedRoomItems = roomItems.sort((a, b) => {
+        const nameA = (a.name || "").toLowerCase();
+        const nameB = (b.name || "").toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
+      sortedRoomItems.forEach((item) => {
         linenItems += `^FO100,${currentY}^A0N,25,25^FD${item.quantity}^FS\n`;
         linenItems += `^FO180,${currentY}^A0N,25,25^FD${item.name || "-"}^FS\n`;
         currentY += lineHeight;
