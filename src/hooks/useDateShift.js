@@ -8,6 +8,11 @@ const useDateShift = (initialShift) => {
     const today = new Date();
     const currentHour = today.getHours();
 
+    // Jika login antara 00:00-07:00, gunakan hari kemarin untuk semua shift
+    if (currentHour >= 0 && currentHour < 7) {
+      today.setDate(today.getDate() - 1);
+    }
+
     switch (shift) {
       case "1":
         today.setHours(13, 0, 0, 0); // Set to 13:00:00 local time
@@ -16,10 +21,6 @@ const useDateShift = (initialShift) => {
         today.setHours(16, 0, 0, 0); // Set to 16:00:00 local time
         break;
       case "3":
-        // Jika login antara 00:00-07:00, gunakan hari kemarin untuk shift 3
-        if (currentHour >= 0 && currentHour < 7) {
-          today.setDate(today.getDate() - 1);
-        }
         today.setHours(19, 0, 0, 0); // Set to 19:00:00 local time
         break;
       default:
