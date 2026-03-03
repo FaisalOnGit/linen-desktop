@@ -110,7 +110,7 @@ const Cetak = () => {
             {
               duration: 3000,
               icon: "⚠️",
-            }
+            },
           );
         }
       } else {
@@ -463,7 +463,7 @@ const Cetak = () => {
                       <tr
                         key={`${item.linenName}-${item.roomName}`}
                         className={`${getRowColor(
-                          index
+                          index,
                         )} transition-colors duration-200`}
                       >
                         <td className="px-4 py-3 text-sm text-gray-700 border-b font-medium">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Play, Trash2, Square, Truck, Printer } from "lucide-react";
 import Select from "react-select";
 import toast from "react-hot-toast";
@@ -43,13 +43,16 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
   const [lastDeliveryData, setLastDeliveryData] = useState(null);
   const [submitDisabled, setSubmitDisabled] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Ref to track submit timeout for preventing double-click
+  const submitTimeoutRef = useRef(null);
   const [isManualDate, setIsManualDate] = useState(false);
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
   // Use custom dateShift hook
   const { dateShift, dateShiftWithTime, updateDateShift } = useDateShift(
-    formData.shift
+    formData.shift,
   );
 
   // Update current time every second
@@ -59,6 +62,15 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  // Cleanup submit timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Load persistent data from localStorage on mount
@@ -147,7 +159,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
     try {
       localStorage.setItem(
         "deliveryPersistentData",
-        JSON.stringify(persistentFields)
+        JSON.stringify(persistentFields),
       );
     } catch (error) {
       // Silent error handling
@@ -461,7 +473,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         {
           duration: 4000,
           icon: "❌",
-        }
+        },
       );
       return;
     }
@@ -473,10 +485,19 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         {
           duration: 4000,
           icon: "❌",
-        }
+        },
       );
       return;
     }
+
+    // Disable submit button immediately to prevent double-click
+    setSubmitDisabled(true);
+
+    // Set up 2-second timeout to re-enable button (for error case)
+    submitTimeoutRef.current = setTimeout(() => {
+      setSubmitDisabled(false);
+      submitTimeoutRef.current = null;
+    }, 2000);
 
     try {
       const token = await window.authAPI.getToken();
@@ -485,7 +506,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         (linen) =>
           linen.epc?.trim() &&
           linen.isValidCustomer !== false &&
-          linen.isValidRoom !== false
+          linen.isValidRoom !== false,
       );
 
       if (validLinens.length === 0) {
@@ -493,6 +514,12 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
           duration: 3000,
           icon: "⚠️",
         });
+        // Clear timeout and re-enable immediately for validation error
+        if (submitTimeoutRef.current) {
+          clearTimeout(submitTimeoutRef.current);
+          submitTimeoutRef.current = null;
+        }
+        setSubmitDisabled(false);
         return;
       }
 
@@ -505,10 +532,10 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         if (savedData.isManualDate && savedData.dateShift) {
           // Use manual date from localStorage with current time
           payloadDateShift = `${savedData.dateShift}T${String(
-            new Date().getHours()
+            new Date().getHours(),
           ).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(
             2,
-            "0"
+            "0",
           )}:00`;
         } else {
           // Use hook time or current form date
@@ -597,6 +624,12 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
       setDeliverySubmitted(true);
       setSubmitDisabled(true);
 
+      // Clear the auto-re-enable timeout since we're keeping it disabled on success
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
+      }
+
       toast.success(successMessage, {
         duration: 4000,
         icon: "✅",
@@ -621,6 +654,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
         duration: 4000,
         icon: "❌",
       });
+      // Submit button will be re-enabled by the 2-second timeout
     }
   };
 
@@ -919,8 +953,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                     !isRfidAvailable || !formData.shift
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : isDeliveryActive
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-primary hover:bg-blue-700"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-primary hover:bg-blue-700"
                   }`}
                   disabled={!isRfidAvailable || !formData.shift}
                 >
@@ -1056,7 +1090,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                       <tr
                         key={linen.epc}
                         className={`${getRowColor(
-                          linen
+                          linen,
                         )} transition-colors duration-200`}
                       >
                         <td className="px-4 py-3 text-sm text-gray-700 border-b">
@@ -1089,8 +1123,8 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                               linen.isValidRoom === false
                                 ? "border-red-300 bg-red-50"
                                 : linen.epc
-                                ? "bg-green-50 border-green-300"
-                                : "border-gray-300"
+                                  ? "bg-green-50 border-green-300"
+                                  : "border-gray-300"
                             }`}
                           />
                         </td>
@@ -1141,7 +1175,7 @@ const DeliveryPage = ({ rfidHook, deliveryType = 1 }) => {
                           ) : (
                             <div
                               className={`px-2 py-1 rounded text-xs font-medium text-center ${getStatusColor(
-                                linen.status
+                                linen.status,
                               )}`}
                             >
                               {linen.status || "Unknown"}
