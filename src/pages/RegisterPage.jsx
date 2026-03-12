@@ -76,13 +76,13 @@ const RegisterPage = ({ rfidHook }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
         console.error(
           "Failed to fetch today's linen count:",
-          response.statusText
+          response.statusText,
         );
         return;
       }
@@ -168,7 +168,7 @@ const RegisterPage = ({ rfidHook }) => {
 
   const handleClearAll = () => {
     console.log(
-      "🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()"
+      "🔘 Clear All button clicked - Complete state reset with rfidHook.clearAllData()",
     );
 
     try {
@@ -243,7 +243,7 @@ const RegisterPage = ({ rfidHook }) => {
       // Filter linen yang valid
       const validLinens = linens.filter(
         (linen) =>
-          linen.linenId?.trim() || linen.epc?.trim() || linen.roomId?.trim()
+          linen.linenId?.trim() || linen.epc?.trim() || linen.roomId?.trim(),
       );
 
       // Create payload - tambahkan roomId ke setiap linen untuk body request tetap sama
@@ -460,8 +460,8 @@ const RegisterPage = ({ rfidHook }) => {
                     !isRfidAvailable
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : isRegisterActive
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-primary hover:bg-blue-700"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-primary hover:bg-blue-700"
                   }`}
                   disabled={!isRfidAvailable}
                 >
@@ -543,9 +543,11 @@ const RegisterPage = ({ rfidHook }) => {
                         <input
                           type="text"
                           value={linen.epc}
-                          readOnly
-                          placeholder="Auto-filled dari scan RFID"
-                          className={`w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent bg-gray-50 ${
+                          onChange={(e) =>
+                            updateLinenField(index, "epc", e.target.value)
+                          }
+                          placeholder="Input atau scan dari RFID..."
+                          className={`w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-transparent ${
                             linen.epc ? "bg-green-50 border-green-300" : ""
                           }`}
                         />
@@ -560,7 +562,7 @@ const RegisterPage = ({ rfidHook }) => {
                               handleLinenChange(
                                 index,
                                 "linenId",
-                                selected?.linenId || ""
+                                selected?.linenId || "",
                               )
                             }
                             options={linenOptions}
@@ -615,14 +617,14 @@ const RegisterPage = ({ rfidHook }) => {
                 !isFormValid(
                   formData.customerId,
                   formData.rfidRegisterDescription,
-                  formData.roomId
+                  formData.roomId,
                 )
               }
               className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                 isFormValid(
                   formData.customerId,
                   formData.rfidRegisterDescription,
-                  formData.roomId
+                  formData.roomId,
                 )
                   ? "bg-primary hover:bg-blue-400 text-white cursor-pointer"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"

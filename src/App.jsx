@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import RegisterPage from "./pages/RegisterPage";
+import ReplaceTagPage from "./pages/ReplaceTagPage";
 import GroupingPage from "./pages/GroupingPage";
 import SettingPage from "./pages/SettingPage";
 import { useRfid } from "./hooks/useRfid";
@@ -141,6 +142,8 @@ const App = () => {
         return <SettingPage rfidHook={rfidHook} />;
       case "register":
         return <RegisterPage rfidHook={rfidHook} />;
+      case "replace-tag":
+        return <ReplaceTagPage rfidHook={rfidHook} />;
       case "sorting":
         return <LinenCleanPage rfidHook={rfidHook} />;
       case "final-check":

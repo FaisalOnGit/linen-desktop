@@ -1,8 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import GroupingTable from "../components/GroupingTable";
 import { Play, Square } from "lucide-react";
 import { useTableMode } from "../contexts/TableModeContext";
@@ -41,10 +37,14 @@ const GroupingPage = ({ rfidHook }) => {
 
       if (latestTag && latestTag.EPC) {
         // Check if this EPC already exists in filtered tags (table)
-        const existingTag = filteredTags.find((tag) => tag.EPC === latestTag.EPC);
+        const existingTag = filteredTags.find(
+          (tag) => tag.EPC === latestTag.EPC,
+        );
 
         if (existingTag) {
-          console.warn(`⚠️ EPC ${latestTag.EPC} already exists in table, skipping`);
+          console.warn(
+            `⚠️ EPC ${latestTag.EPC} already exists in table, skipping`,
+          );
           return;
         }
 
@@ -83,8 +83,8 @@ const GroupingPage = ({ rfidHook }) => {
               !isRfidAvailable
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : isGroupingActive
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-primary hover:bg-blue-800"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-primary hover:bg-blue-800"
             }`}
             disabled={!isRfidAvailable}
           >
@@ -107,16 +107,12 @@ const GroupingPage = ({ rfidHook }) => {
           <div className="flex items-center">
             <label className="text-gray-600 w-24">RFID</label>
             <span className="mx-3">:</span>
-            <span className="text-gray-800">
-              {currentLinenInfo.epc || "−"}
-            </span>
+            <span className="text-gray-800">{currentLinenInfo.epc || "−"}</span>
           </div>
           <div className="flex items-center">
             <label className="text-gray-600 w-24">Linen</label>
             <span className="mx-3">:</span>
-            <span className="text-gray-800">
-              {currentLinenInfo.linenName}
-            </span>
+            <span className="text-gray-800">{currentLinenInfo.linenName}</span>
           </div>
           <div className="flex items-center">
             <label className="text-gray-600 w-24">Customer</label>

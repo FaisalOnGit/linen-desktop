@@ -7,6 +7,7 @@ export const useRfid = () => {
   const [logs, setLogs] = useState("");
   const [tags, setTags] = useState([]);
   const [registerTags, setRegisterTags] = useState([]);
+  const [replaceTags, setReplaceTags] = useState([]);
   const [groupingTags, setGroupingTags] = useState([]);
   const [sortingTags, setSortingTags] = useState([]);
   const [deliveryTags, setDeliveryTags] = useState([]);
@@ -14,6 +15,7 @@ export const useRfid = () => {
   const [isGroupingActive, setIsGroupingActive] = useState(false);
   const [isSortingActive, setIsSortingActive] = useState(false);
   const [isRegisterActive, setIsRegisterActive] = useState(false);
+  const [isReplaceActive, setIsReplaceActive] = useState(false);
   const [isDeliveryActive, setIsDeliveryActive] = useState(false);
   const [isLinenBersihActive, setIsLinenBersihActive] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
@@ -30,6 +32,7 @@ export const useRfid = () => {
     grouping: null,
     sorting: null,
     register: null,
+    replace: null,
     delivery: null,
     linenBersih: null,
   });
@@ -47,6 +50,7 @@ export const useRfid = () => {
       grouping: null,
       sorting: null,
       register: null,
+      replace: null,
       delivery: null,
       linenBersih: null,
     };
@@ -60,6 +64,7 @@ export const useRfid = () => {
     // Reset all tag data
     setTags([]);
     setRegisterTags([]);
+    setReplaceTags([]);
     setGroupingTags([]);
     setSortingTags([]);
     setDeliveryTags([]);
@@ -69,6 +74,7 @@ export const useRfid = () => {
     setIsGroupingActive(false);
     setIsSortingActive(false);
     setIsRegisterActive(false);
+    setIsReplaceActive(false);
     setIsDeliveryActive(false);
     setIsLinenBersihActive(false);
 
@@ -465,6 +471,63 @@ export const useRfid = () => {
   };
 
   // ==================
+  // Replace Tag
+  // ==================
+
+  const startReplace = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    // Clear existing interval if any
+    if (intervalRefs.current.replace) {
+      clearInterval(intervalRefs.current.replace);
+      intervalRefs.current.replace = null;
+    }
+
+    try {
+      await window.rfidAPI.startInventory();
+      setIsReplaceActive(true);
+
+      intervalRefs.current.replace = setInterval(async () => {
+        try {
+          const tagsData = await window.rfidAPI.getTags();
+
+          // Only add new tags that don't exist in current replaceTags
+          setReplaceTags(prevTags => {
+            const existingEpcSet = new Set(prevTags.map(tag => tag.EPC));
+            const newTags = tagsData.filter(tag => !existingEpcSet.has(tag.EPC));
+            return [...prevTags, ...newTags];
+          });
+        } catch (err) {
+          console.error("Error fetching replace tags:", err);
+        }
+      }, 1000);
+    } catch (err) {
+      console.error("Error starting replace:", err);
+    }
+  };
+
+  const stopReplace = async () => {
+    if (!isRfidAvailable) {
+      console.error("RFID API not available");
+      return;
+    }
+
+    try {
+      await window.rfidAPI.stopInventory();
+      setIsReplaceActive(false);
+      if (intervalRefs.current.replace) {
+        clearInterval(intervalRefs.current.replace);
+        intervalRefs.current.replace = null;
+      }
+    } catch (err) {
+      console.error("Error stopping replace:", err);
+    }
+  };
+
+  // ==================
   // Grouping
   // ==================
 
@@ -726,6 +789,7 @@ export const useRfid = () => {
     logs,
     tags,
     registerTags,
+    replaceTags,
     groupingTags,
     sortingTags,
     deliveryTags,
@@ -734,6 +798,7 @@ export const useRfid = () => {
     isSortingActive,
     isRegisterActive,
     isDeliveryActive,
+    isReplaceActive,
     isLinenBersihActive,
     configLoaded, // New state to track if config is loaded
 
@@ -757,6 +822,8 @@ export const useRfid = () => {
     setPowerLevel,
     getPowerLevel,
     startRegister,
+    startReplace,
+    stopReplace,
     stopRegister,
     startGrouping,
     stopGrouping,
@@ -776,6 +843,7 @@ export const useRfid = () => {
       setTags([]);
       setRegisterTags([]);
       setGroupingTags([]);
+      setReplaceTags([]);
       setSortingTags([]);
       setDeliveryTags([]);
       setLinenBersihTags([]);

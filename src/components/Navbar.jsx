@@ -16,6 +16,7 @@ import {
   PackageOpen,
   Clock,
   FileOutput,
+  Replace,
 } from "lucide-react";
 import Osla from "../../public/osla.png";
 import { useEffect } from "react";
@@ -113,6 +114,13 @@ const Navbar = ({ activePage, onNavigate, rfidHook }) => {
                     icon: Tags,
                     size: "large",
                     description: "Register new RFID tags",
+                  },
+                  {
+                    id: "replace-tag",
+                    label: "Replace\nTag",
+                    icon: Replace,
+                    size: "large",
+                    description: "Replace RFID tags",
                   },
                 ],
               },
